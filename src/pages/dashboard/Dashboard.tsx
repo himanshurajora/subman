@@ -84,7 +84,7 @@ export function Dashboard() {
     }
   );
   
-  const monthlySpending = activeSubscriptions.reduce(
+  const totalSpending = activeSubscriptions.reduce(
     (total, sub) => total + sub.amount,
     0
   );
@@ -221,7 +221,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Monthly Spending Card */}
+        {/* Total Spending Card */}
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -233,11 +233,12 @@ export function Dashboard() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    {t("dashboard.monthlySpending")}
+                    {t("dashboard.totalSpending")}
                   </dt>
                   <dd>
                     <div className="text-lg font-medium text-gray-900 dark:text-white">
-                      ${monthlySpending.toFixed(2)}
+                      <span className="text-lg">₹</span>
+                       {totalSpending.toFixed(2)}
                     </div>
                   </dd>
                 </dl>

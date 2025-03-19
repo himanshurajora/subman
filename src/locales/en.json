@@ -28,7 +28,7 @@
     "totalSubscriptions": "Total Subscriptions",
     "activeSubscriptions": "Active Subscriptions",
     "expiringSubscriptions": "Expiring Soon",
-    "monthlySpending": "Monthly Spending"
+    "totalSpending": "Total Spending"
   },
   "subscription": {
     "add": "Add Subscription",
@@ -46,7 +46,8 @@
     "reminderDays": "Reminder Days",
     "attachments": "Attachments",
     "scanQR": "Scan QR Code",
-    "manualEntry": "Manual Entry"
+    "manualEntry": "Manual Entry",
+    "reminderDaysHelp": "How many days before the subscription ends should we remind you"
   },
   "subscriptionTypes": {
     "vehicle": "Vehicle",
