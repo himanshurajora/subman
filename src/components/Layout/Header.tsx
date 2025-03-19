@@ -27,7 +27,7 @@ export function Header() {
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <Link to="/" className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t('app.name')}
+                  SubMan
                 </Link>
               </div>
               {currentUser && (
