@@ -638,15 +638,48 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           )}
           
           {isProcessingAI && (
-            <div className="mb-4 bg-blue-50 dark:bg-blue-900 p-3 rounded-md">
+            <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900 p-4 rounded-md shadow-md overflow-hidden relative">
+              <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
               <div className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  {isPdfMode ? 'Processing PDF...' : 'Analyzing QR code...'}
-                </p>
+                <div className="relative mr-4 flex-shrink-0">
+                  {/* AI Brain Processing Animation */}
+                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center relative overflow-hidden">
+                    {/* Pulsing circles */}
+                    <div className="absolute w-12 h-12 rounded-full bg-indigo-400 opacity-20 animate-ping-slow"></div>
+                    <div className="absolute w-8 h-8 rounded-full bg-purple-400 opacity-20 animate-ping"></div>
+                    
+                    {/* Brain icon */}
+                    <svg className="w-6 h-6 text-white z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    
+                    {/* Moving dots for "processing" effect */}
+                    <div className="absolute bottom-1 flex space-x-0.5 justify-center">
+                      <div className="w-1 h-1 bg-white rounded-full opacity-80 animate-pulse"></div>
+                      <div className="w-1 h-1 bg-white rounded-full opacity-80 animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+                      <div className="w-1 h-1 bg-white rounded-full opacity-80 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex-grow">
+                  <p className="text-sm font-medium text-indigo-800 dark:text-indigo-200">
+                    {isPdfMode ? 'Processing PDF with AI' : 'Analyzing QR code with AI'}
+                  </p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-300 mt-1">
+                    {isPdfMode 
+                      ? 'Extracting text and identifying key subscription details...' 
+                      : 'Reading content and identifying subscription information...'}
+                  </p>
+                  
+                  {/* Progress bar with shimmer effect */}
+                  <div className="mt-2 h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full relative overflow-hidden animate-progress-indeterminate">
+                      <div className="absolute inset-0 bg-shimmer"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -729,10 +762,47 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
                     </div>
                   )}
                   {isProcessingAI && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
-                      <div className="text-center px-4">
-                        <div className="animate-spin inline-block w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mb-2"></div>
-                        <p className="text-white text-sm">Processing with AI...</p>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
+                      <div className="text-center px-6 py-5 bg-gray-900 bg-opacity-80 rounded-xl border border-indigo-500 max-w-xs mx-auto">
+                        {/* AI Processing Animation */}
+                        <div className="mx-auto w-16 h-16 mb-4 relative">
+                          {/* Outer rotating ring */}
+                          <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-l-transparent animate-spin-slow"></div>
+                          
+                          {/* Inner pulsing circle */}
+                          <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 animate-pulse"></div>
+                          
+                          {/* Center icon */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5 9.51472 14.4853 7.5 12 7.5C9.51472 7.5 7.5 9.51472 7.5 12C7.5 14.4853 9.51472 16.5 12 16.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M3 12H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M16.5 12H21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 7.5V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M12 21V16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                          
+                          {/* Floating particles */}
+                          <div className="absolute -right-1 top-2 w-2 h-2 rounded-full bg-blue-400 animate-float" style={{ animationDelay: '0s' }}></div>
+                          <div className="absolute -left-1 bottom-2 w-1.5 h-1.5 rounded-full bg-indigo-300 animate-float" style={{ animationDelay: '0.5s' }}></div>
+                          <div className="absolute left-4 -top-1 w-1 h-1 rounded-full bg-purple-400 animate-float" style={{ animationDelay: '1s' }}></div>
+                        </div>
+                        
+                        <h4 className="text-indigo-300 font-semibold text-lg mb-1">AI Processing</h4>
+                        <p className="text-white text-sm mb-3">
+                          {isPdfMode ? 'Analyzing PDF content...' : 'Processing QR code data...'}
+                        </p>
+                        
+                        {/* Text animation (typing effect) */}
+                        <div className="flex justify-center space-x-1 text-xs text-indigo-300">
+                          <span>Processing</span>
+                          <span className="inline-flex">
+                            <span className="animate-blink">.</span>
+                            <span className="animate-blink" style={{ animationDelay: '0.3s' }}>.</span>
+                            <span className="animate-blink" style={{ animationDelay: '0.6s' }}>.</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
