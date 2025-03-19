@@ -7,6 +7,7 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   reminderDays: number;
+  reminder?: boolean;
   amount: number;
   currency: string;
   provider: string;
@@ -15,6 +16,26 @@ export interface Subscription {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  
+  // Vehicle specific properties
+  vehicleNumber?: string;
+  vehicleType?: string;
+  registrationType?: string;
+  owner?: string;
+  
+  // Membership specific properties
+  membershipId?: string;
+  level?: string;
+  
+  // Utility specific properties
+  accountNumber?: string;
+  utilityType?: string;
+  serviceAddress?: string;
+  
+  // Insurance specific properties
+  policyNumber?: string;
+  coverageType?: string;
+  coverage?: number;
 }
 
 export interface VehicleSubscription extends Subscription {

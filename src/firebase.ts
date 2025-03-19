@@ -1,8 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User, updateProfile } from "firebase/auth";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, enableIndexedDbPersistence } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -23,8 +23,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
+// Initialize Firestore with settings to improve reliability
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+// Enable offline persistence with improved error handling
+try {
+  // Enable persistence without additional settings
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time
+      console.log('Persistence failed: Multiple tabs open');
+      // This is expected behavior in multiple tabs, so we can continue without crashing
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support persistence
+      console.log('Persistence not supported by this browser');
+    } else {
+      // Other errors like network issues
+      console.error('Firestore persistence error:', err);
+    }
+  });
+} catch (error) {
+  // Handle any unexpected errors during initialization
+  console.error('Error initializing Firestore persistence:', error);
+}
 
 export { 
   app, 
@@ -36,6 +58,7 @@ export {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
   collection,
   doc,
   setDoc,

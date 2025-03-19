@@ -13,16 +13,35 @@ export function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Create an AbortController to cancel the fetch if component unmounts
+    const controller = new AbortController();
+    
     async function fetchSubscriptions() {
       if (!currentUser) return;
 
       try {
         setLoading(true);
+        
+        // Set a timeout to handle the request to prevent hanging
+        const timeoutId = setTimeout(() => {
+          if (loading && !controller.signal.aborted) {
+            controller.abort();
+            setError("Request timed out. Please try again.");
+            setLoading(false);
+          }
+        }, 10000); // 10 second timeout
+        
         const q = query(
           collection(db, "subscriptions"),
           where("userId", "==", currentUser.uid)
         );
+        
         const querySnapshot = await getDocs(q);
+        
+        // Clear the timeout since we got the data
+        clearTimeout(timeoutId);
+        
+        if (controller.signal.aborted) return;
         
         const subscriptionsData: Subscription[] = [];
         querySnapshot.forEach((doc) => {
@@ -30,15 +49,23 @@ export function Dashboard() {
         });
         
         setSubscriptions(subscriptionsData);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching subscriptions:", error);
-        setError("Failed to load subscriptions");
-      } finally {
-        setLoading(false);
+        // Only set error if not aborted to avoid React state updates on unmounted component
+        if (!controller.signal.aborted) {
+          setError("Failed to load subscriptions");
+          setLoading(false);
+        }
       }
     }
 
     fetchSubscriptions();
+    
+    // Cleanup function to abort fetch if component unmounts
+    return () => {
+      controller.abort();
+    };
   }, [currentUser]);
 
   // Calculate statistics
@@ -64,10 +91,38 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex flex-col justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600 mb-4"></div>
+        <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+          {t("common.loading")}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          {t("Fetching your subscription data...")}
+        </p>
+      </div>
+    );
+  }
+
+  // If there's an error but no subscriptions, show a more helpful message
+  if (error && subscriptions.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div className="text-center">
-          <div className="spinner mb-4"></div>
-          <p>{t("common.loading")}</p>
+          <svg className="mx-auto h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">{error}</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Please check your internet connection and try again.
+          </p>
+          <div className="mt-6">
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -197,6 +252,9 @@ export function Dashboard() {
           to="/subscriptions/add"
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
           {t("subscription.add")}
         </Link>
       </div>

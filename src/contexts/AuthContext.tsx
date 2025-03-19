@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { auth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "../firebase";
+import { auth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "../firebase";
 import { User as FirebaseUser } from "firebase/auth";
 import { User } from "../types";
 import { db, doc, getDoc, setDoc } from "../firebase";
@@ -13,6 +13,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   setUserLanguage: (language: 'en' | 'hi') => Promise<void>;
   setUserTheme: (theme: 'light' | 'dark') => Promise<void>;
+  updateUserProfile: (profileData: { displayName?: string; photoURL?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -132,6 +133,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  async function updateUserProfile(profileData: { displayName?: string; photoURL?: string }) {
+    if (!currentUser) return;
+    
+    try {
+      // Update Firebase Auth profile
+      await updateProfile(currentUser, profileData);
+      
+      // If we have a user profile, update it as well
+      if (userProfile) {
+        const updates: Partial<User> = {};
+        
+        if (profileData.displayName) {
+          updates.displayName = profileData.displayName;
+        }
+        
+        if (profileData.photoURL) {
+          updates.photoURL = profileData.photoURL;
+        }
+        
+        // Only update Firestore if we have updates
+        if (Object.keys(updates).length > 0) {
+          const userDocRef = doc(db, "users", currentUser.uid);
+          await setDoc(userDocRef, updates, { merge: true });
+          
+          // Update local state
+          setUserProfile({ ...userProfile, ...updates });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
+  }
+
   const value = {
     currentUser,
     userProfile,
@@ -140,7 +175,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signup,
     logout,
     setUserLanguage,
-    setUserTheme
+    setUserTheme,
+    updateUserProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
