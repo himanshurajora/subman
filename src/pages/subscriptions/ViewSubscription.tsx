@@ -375,6 +375,113 @@ export function ViewSubscription() {
               </dl>
             </div>
           )}
+          
+          {/* Contact Information Section */}
+          {(subscription.ownerName || subscription.address || subscription.contactNumber || subscription.email) && (
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
+                {t("Contact Information")}
+              </h3>
+              
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {subscription.ownerName && (
+                  <div className="col-span-1 md:col-span-2">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      {t("Owner/Customer Name")}
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                      {subscription.ownerName}
+                    </dd>
+                  </div>
+                )}
+                
+                {subscription.address && (
+                  <div className="col-span-1 md:col-span-2">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      {t("Address")}
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                      {subscription.address}
+                    </dd>
+                  </div>
+                )}
+                
+                {subscription.contactNumber && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      {t("Contact Number")}
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                      {subscription.contactNumber}
+                    </dd>
+                  </div>
+                )}
+                
+                {subscription.email && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      {t("Email ID")}
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                      {subscription.email}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+          
+          {/* Additional Details (Dynamic Fields) */}
+          {(() => {
+            // List of all standard field names
+            const standardFields = [
+              'id', 'userId', 'type', 'name', 'provider', 'startDate', 'endDate', 'reminderDays', 'amount', 
+              'currency', 'notes', 'reminder', 'vehicleNumber', 'vehicleType', 'registrationType', 'owner',
+              'membershipId', 'level', 'accountNumber', 'utilityType', 'serviceAddress',
+              'policyNumber', 'coverageType', 'coverage', 'ownerName', 'address', 'contactNumber', 'email',
+              'createdAt', 'updatedAt'
+            ];
+            
+            // Find any non-standard fields
+            const dynamicFields = Object.keys(subscription)
+              .filter(key => 
+                !standardFields.includes(key) && 
+                subscription[key] !== undefined && 
+                subscription[key] !== null && 
+                subscription[key] !== ''
+              );
+            
+            if (dynamicFields.length === 0) {
+              return null;
+            }
+            
+            return (
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
+                  {t("Additional Details")}
+                </h3>
+                
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dynamicFields.map(field => {
+                    const fieldValue = subscription[field];
+                    return (
+                      <div key={field}>
+                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                          {/* Convert camelCase to Title Case */}
+                          {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                          {typeof fieldValue === 'number' 
+                            ? formatCurrency(fieldValue) 
+                            : String(fieldValue)}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

@@ -17,6 +17,12 @@ export interface Subscription {
   createdAt: string;
   updatedAt: string;
   
+  // Contact information fields
+  ownerName?: string;
+  address?: string;
+  contactNumber?: string;
+  email?: string;
+  
   // Vehicle specific properties
   vehicleNumber?: string;
   vehicleType?: string;
@@ -81,11 +87,34 @@ export interface SubscriptionFormFields {
   startDate: string;
   endDate: string;
   reminderDays: number;
+  reminder?: boolean;
   amount: number;
   currency: string;
   provider: string;
   notes?: string;
-  [key: string]: any; // For dynamic fields based on subscription type
+  type: SubscriptionType;
+  
+  // Contact information fields
+  ownerName?: string;
+  address?: string;
+  contactNumber?: string;
+  email?: string;
+  
+  // Type-specific fields may be added dynamically
+  vehicleNumber?: string;
+  vehicleType?: string;
+  registrationType?: string;
+  owner?: string;
+  membershipId?: string;
+  level?: string;
+  accountNumber?: string;
+  utilityType?: string;
+  serviceAddress?: string;
+  policyNumber?: string;
+  coverageType?: string;
+  coverage?: number;
+  
+  [key: string]: any; // For any other dynamic fields
 }
 
 export interface QRCodeData {

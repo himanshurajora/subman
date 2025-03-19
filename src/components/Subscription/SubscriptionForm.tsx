@@ -15,7 +15,8 @@ const DEFAULT_FORM_DATA: SubscriptionFormFields = {
   name: '',
   startDate: new Date().toISOString().split('T')[0],
   endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-  reminderDays: 30,
+  reminderDays: 20,
+  reminder: true,
   amount: 0,
   currency: 'INR',
   provider: '',
@@ -76,9 +77,12 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
     const updatedData = {
       ...DEFAULT_FORM_DATA,
       ...formData,
-      ...data.data,
+      ...data.data,  // This will overwrite existing fields and add any new dynamic fields
       type: data.type
     };
+    
+    console.log('QR scan data received:', data);
+    console.log('Updated form data with dynamic fields:', updatedData);
     
     // Update form with QR code data
     setFormData(updatedData);
@@ -333,6 +337,138 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
     }
   };
 
+  // Function to render any additional dynamic fields detected by AI
+  const renderDynamicFields = () => {
+    // Get all standard field names that we don't want to display twice
+    const standardFields = [
+      'type', 'name', 'provider', 'startDate', 'endDate', 'reminderDays', 'amount', 'currency', 
+      'notes', 'reminder', 'vehicleNumber', 'vehicleType', 'registrationType', 'owner',
+      'membershipId', 'level', 'accountNumber', 'utilityType', 'serviceAddress',
+      'policyNumber', 'coverageType', 'coverage', 'ownerName', 'address', 'contactNumber', 'email'
+    ];
+    
+    // Find all non-standard fields in formData
+    const dynamicFields = Object.keys(formData)
+      .filter(key => 
+        !standardFields.includes(key) && 
+        formData[key] !== undefined && 
+        formData[key] !== null && 
+        formData[key] !== ''
+      );
+    
+    if (dynamicFields.length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Additional Details
+        </h3>
+        
+        {dynamicFields.map((field) => {
+          const fieldValue = formData[field];
+          const fieldType = typeof fieldValue === 'number' ? 'number' : 'text';
+          
+          return (
+            <div className="mb-4" key={field}>
+              <label htmlFor={field} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {/* Convert camelCase to Title Case */}
+                {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+              </label>
+              <input
+                type={fieldType}
+                id={field}
+                name={field}
+                value={fieldValue}
+                onChange={handleChange}
+                className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Function to render contact information fields
+  const renderContactInfoFields = () => {
+    // Only render this section if at least one contact field has a value
+    if (!formData.ownerName && !formData.address && !formData.contactNumber && !formData.email) {
+      return null;
+    }
+    
+    return (
+      <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Contact Information
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Owner Name field */}
+          <div className="col-span-1 md:col-span-2">
+            <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Owner/Customer Name
+            </label>
+            <input
+              id="ownerName"
+              name="ownerName"
+              type="text"
+              value={formData.ownerName || ''}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+            />
+          </div>
+          
+          {/* Address field */}
+          <div className="col-span-1 md:col-span-2">
+            <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Address
+            </label>
+            <input
+              id="address"
+              name="address"
+              type="text"
+              value={formData.address || ''}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+            />
+          </div>
+          
+          {/* Contact Number field */}
+          <div>
+            <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Contact Number
+            </label>
+            <input
+              id="contactNumber"
+              name="contactNumber"
+              type="text"
+              value={formData.contactNumber || ''}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+            />
+          </div>
+          
+          {/* Email field */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email ID
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email || ''}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
       <form onSubmit={handleSubmit}>
@@ -475,6 +611,9 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
           )}
         </div>
         
+        {/* Render contact information fields */}
+        {renderContactInfoFields()}
+        
         {formData.type !== 'other' && (
           <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -484,6 +623,9 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
             {renderTypeSpecificFields()}
           </div>
         )}
+        
+        {/* Render any additional dynamic fields detected by AI */}
+        {renderDynamicFields()}
         
         <div className="mt-8 flex justify-between items-center">
           <div>

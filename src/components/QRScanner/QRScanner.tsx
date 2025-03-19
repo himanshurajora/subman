@@ -177,6 +177,12 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         - Currency
         - Any unique identifier (vehicle number, membership ID, account number, policy number)
 
+        IMPORTANT: Also extract these personal/contact details if available:
+        - Owner name or customer name
+        - Address (billing or service address)
+        - Contact number or phone
+        - Email ID
+
         I also want to extract ANY other potentially useful fields present in the data that could be relevant for a subscription management system.
 
         Return the information in a structured JSON format with the following schema:
@@ -189,6 +195,12 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             "endDate": "YYYY-MM-DD",
             "amount": number,
             "currency": "Currency code like INR, USD",
+            
+            // Personal/contact details if available
+            "ownerName": "Name of the owner/customer",
+            "address": "Billing or service address",
+            "contactNumber": "Phone number with or without country code",
+            "email": "Email address of the owner/customer",
             
             // Include any of these identifiers if present
             "vehicleNumber": "For vehicle subscriptions",
