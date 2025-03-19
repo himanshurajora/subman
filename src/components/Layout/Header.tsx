@@ -1,14 +1,12 @@
 import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { MobileMenu } from './MobileMenu';
 
 export function Header() {
   const { currentUser, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { language, changeLanguage } = useLanguage();
   const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -51,7 +49,7 @@ export function Header() {
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:items-center">
               {/* Theme toggle */}
-              <button
+              {/* <button
                 onClick={toggleTheme}
                 className="p-1 rounded-full text-gray-400 hover:text-gray-500 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
@@ -64,7 +62,7 @@ export function Header() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                   </svg>
                 )}
-              </button>
+              </button> */}
 
               {/* Language toggle */}
               <button

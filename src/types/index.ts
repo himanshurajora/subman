@@ -42,6 +42,9 @@ export interface Subscription {
   policyNumber?: string;
   coverageType?: string;
   coverage?: number;
+  
+  // Allow for dynamic properties
+  [key: string]: any;
 }
 
 export interface VehicleSubscription extends Subscription {
