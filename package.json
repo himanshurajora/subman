@@ -20,6 +20,7 @@
     "firebase": "^11.4.0",
     "html-to-image": "^1.11.13",
     "i18next": "^24.2.3",
+    "pdfjs-dist": "3.11.174",
     "postcss": "^8.5.3",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",

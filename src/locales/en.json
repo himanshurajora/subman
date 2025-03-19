@@ -102,6 +102,9 @@
     "search": "Search",
     "filter": "Filter",
     "exportCSV": "Export as CSV",
-    "exportPDF": "Export as PDF"
+    "exportPDF": "Export as PDF",
+    "saving": "Saving...",
+    "deleting": "Deleting...",
+    "updating": "Updating..."
   }
 } 

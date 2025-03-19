@@ -4,7 +4,9 @@ import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
 import { QRCodeData } from '../../types';
 import { getVertexAI, getGenerativeModel } from 'firebase/vertexai';
 import { getApp } from 'firebase/app';
-
+import * as pdfjsLib from 'pdfjs-dist';
+// Configure PDF.js to use a CDN worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 interface QRScannerProps {
   onScan: (data: QRCodeData) => void;
   onClose: () => void;
@@ -23,15 +25,137 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [countdown, setCountdown] = useState<number>(5);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState<boolean>(false);
+  const [isPdfMode, setIsPdfMode] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize code reader once
   const codeReader = new BrowserQRCodeReader();
+
+  // Toggle between QR scanner and PDF upload
+  const toggleMode = () => {
+    setIsPdfMode(!isPdfMode);
+    setError('');
+    setInvalidQRError(null);
+    setRawQRContent(null);
+    
+    // Stop scanner if running
+    if (controlsRef.current && !isPdfMode) {
+      controlsRef.current.stop();
+    }
+  };
+
+  // Trigger file input click
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Extract text from PDF
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      // Read the file
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Configure PDF.js for main thread operation
+      // Using @ts-ignore because we need to force no worker mode
+      // @ts-ignore
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        disableStream: true,
+        disableAutoFetch: true,
+        disableRange: true
+      });
+      
+      // Get the PDF document
+      const pdf = await loadingTask.promise;
+      console.log(`PDF loaded successfully with ${pdf.numPages} pages`);
+      
+      let fullText = '';
+      
+      // Process each page
+      for (let i = 1; i <= pdf.numPages; i++) {
+        try {
+          console.log(`Processing page ${i}/${pdf.numPages}`);
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          
+          fullText += pageText + '\n';
+        } catch (pageError) {
+          console.warn(`Error extracting text from page ${i}:`, pageError);
+        }
+      }
+      
+      if (!fullText.trim()) {
+        throw new Error('No text could be extracted from the PDF');
+      }
+      
+      console.log(`Extracted ${fullText.length} characters of text`);
+      return fullText;
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error);
+      throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Handle PDF selection
+  const handlePdfSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    if (file.type !== 'application/pdf') {
+      setError('Selected file is not a PDF');
+      return;
+    }
+    
+    try {
+      setIsProcessingAI(true);
+      setRawQRContent(`Extracting text from: ${file.name}...`);
+      
+      // Extract text from PDF
+      console.log(`Processing PDF file: ${file.name} (${Math.round(file.size / 1024)} KB)`);
+      const extractedText = await extractTextFromPDF(file);
+      console.log(`Successfully extracted ${extractedText.length} characters of text from PDF`);
+      
+      if (extractedText.length > 200) {
+        // Log a preview of the extracted text (first 200 chars)
+        console.log('Text preview:', extractedText.substring(0, 200) + '...');
+      } else {
+        console.log('Extracted text:', extractedText);
+      }
+      
+      setRawQRContent(extractedText);
+      
+      // Process with AI
+      const result = await processWithAI(extractedText);
+      if (result) {
+        console.log('Successfully processed PDF with AI:', result);
+        onScan(result);
+      } else {
+        console.error('AI processing failed to extract subscription information');
+        setInvalidQRError('Could not extract subscription information from the PDF.');
+      }
+    } catch (error) {
+      console.error('PDF processing error:', error);
+      setInvalidQRError(`Failed to process the PDF file: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again with a different file.`);
+    } finally {
+      setIsProcessingAI(false);
+      // Reset the file input so the same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Process QR data with Firebase Vertex AI when standard parsing fails
   const processWithAI = async (rawData: string): Promise<QRCodeData | null> => {
     try {
       setIsProcessingAI(true);
-      console.log('Processing QR code with AI...');
+      console.log('Processing content with AI...');
       
       // Initialize Vertex AI
       const firebaseApp = getApp();
@@ -40,7 +164,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       
       // Create a well-crafted prompt for the model
       const prompt = `
-        Analyze the following text from a QR code and extract relevant subscription information.
+        Analyze the following text extracted from a QR code or PDF and extract relevant subscription information.
         The text may contain information about a subscription, registration, membership, utility bill, or insurance policy.
 
         I need to extract these common fields (if present):
@@ -72,14 +196,14 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             "accountNumber": "For utility subscriptions",
             "policyNumber": "For insurance subscriptions",
             
-            // Include any other fields found in the QR code
+            // Include any other fields found in the text
             "additionalField1": "value1",
             "additionalField2": "value2"
           }
         }
         If there's not enough information to determine this is a subscription, respond with: {"insufficient": true}
 
-        QR code text to analyze:
+        Text to analyze:
         ${rawData}
       `;
       
@@ -102,7 +226,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           return null;
         }
         
-        // Return the parsed QR data
+        // Return the parsed data
         return parsedData as QRCodeData;
       } catch (parseError) {
         console.error('Error parsing AI response as JSON:', parseError);
@@ -450,7 +574,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            {t('subscription.scanQR')}
+            {isPdfMode ? t('Extract from PDF') : t('subscription.scanQR')}
           </h3>
           <button
             type="button"
@@ -464,6 +588,34 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         </div>
         
         <div className="p-4">
+          {/* Toggle between QR and PDF modes */}
+          <div className="flex justify-center mb-4">
+            <div className="bg-gray-200 dark:bg-gray-700 rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => !isPdfMode || toggleMode()}
+                className={`px-4 py-2 rounded-full text-sm font-medium focus:outline-none ${
+                  !isPdfMode 
+                    ? 'bg-indigo-600 text-white' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                Scan QR
+              </button>
+              <button
+                type="button"
+                onClick={() => isPdfMode || toggleMode()}
+                className={`px-4 py-2 rounded-full text-sm font-medium focus:outline-none ${
+                  isPdfMode 
+                    ? 'bg-indigo-600 text-white' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                Upload PDF
+              </button>
+            </div>
+          </div>
+
           {error && (
             <div className="mb-4 bg-red-50 dark:bg-red-900 p-3 rounded-md">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
@@ -481,85 +633,117 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Analyzing QR code with AI...
+                  {isPdfMode ? 'Processing PDF...' : 'Analyzing QR code...'}
                 </p>
               </div>
             </div>
           )}
-          
-          <div className="mb-4">
-            <label htmlFor="camera-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('Select Camera')}
-            </label>
-            <select
-              id="camera-select"
-              value={selectedDeviceId}
-              onChange={handleDeviceChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-            >
-              {devices.length === 0 ? (
-                <option value="">Loading cameras...</option>
-              ) : (
-                devices.map(device => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Camera ${devices.indexOf(device) + 1}`}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-          
-          <div className="flex justify-center mb-4">
-            <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
-              <video
-                ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover"
-                autoPlay
-                playsInline
-                muted
-              />
-              {scanning && !error && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="h-48 w-48 border-2 border-indigo-500 rounded-lg opacity-70"></div>
-                  <div className="absolute h-6 w-6 border-t-2 border-l-2 border-indigo-500 top-1/2 left-1/2 -translate-x-24 -translate-y-24 rounded-tl-md"></div>
-                  <div className="absolute h-6 w-6 border-t-2 border-r-2 border-indigo-500 top-1/2 right-1/2 translate-x-24 -translate-y-24 rounded-tr-md"></div>
-                  <div className="absolute h-6 w-6 border-b-2 border-l-2 border-indigo-500 bottom-1/2 left-1/2 -translate-x-24 translate-y-24 rounded-bl-md"></div>
-                  <div className="absolute h-6 w-6 border-b-2 border-r-2 border-indigo-500 bottom-1/2 right-1/2 translate-x-24 translate-y-24 rounded-br-md"></div>
+
+          {isPdfMode ? (
+            // PDF Upload Mode
+            <div className="flex flex-col items-center justify-center">
+              <div className="mb-6 w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors cursor-pointer" onClick={handleUploadClick}>
+                <div className="flex flex-col items-center justify-center">
+                  <svg className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Click to upload a PDF</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">PDF files only</p>
                 </div>
-              )}
-              {!scanning && !error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                  <p className="text-white text-center px-4">
-                    {selectedDeviceId ? "Camera initializing..." : "Select a camera from the dropdown"}
-                  </p>
-                </div>
-              )}
-              {isProcessingAI && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
-                  <div className="text-center px-4">
-                    <div className="animate-spin inline-block w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mb-2"></div>
-                    <p className="text-white text-sm">Processing with AI...</p>
-                  </div>
-                </div>
-              )}
+
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  ref={fileInputRef}
+                  onChange={handlePdfSelection}
+                  accept="application/pdf"
+                />
+              </div>
+              
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+                The system will extract text from the PDF and analyze it to find subscription information.
+                For best results, use PDFs with selectable text (not scanned images).
+                PDF should include subscription details like dates, amounts, and service information.
+              </p>
             </div>
-          </div>
-          
-          <div className="flex justify-center mb-4">
-            <button
-              type="button"
-              onClick={handleRestartCamera}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              Restart Camera
-            </button>
-          </div>
-          
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
-            {scanning && !error
-              ? t('Position the QR code within the frame to scan') 
-              : t('Select a camera and start scanning')}
-          </p>
+          ) : (
+            // QR Scanner Mode
+            <>
+              <div className="mb-4">
+                <label htmlFor="camera-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('Select Camera')}
+                </label>
+                <select
+                  id="camera-select"
+                  value={selectedDeviceId}
+                  onChange={handleDeviceChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+                >
+                  {devices.length === 0 ? (
+                    <option value="">Loading cameras...</option>
+                  ) : (
+                    devices.map(device => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `Camera ${devices.indexOf(device) + 1}`}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              
+              <div className="flex justify-center mb-4">
+                <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                  {scanning && !error && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="h-48 w-48 border-2 border-indigo-500 rounded-lg opacity-70"></div>
+                      <div className="absolute h-6 w-6 border-t-2 border-l-2 border-indigo-500 top-1/2 left-1/2 -translate-x-24 -translate-y-24 rounded-tl-md"></div>
+                      <div className="absolute h-6 w-6 border-t-2 border-r-2 border-indigo-500 top-1/2 right-1/2 translate-x-24 -translate-y-24 rounded-tr-md"></div>
+                      <div className="absolute h-6 w-6 border-b-2 border-l-2 border-indigo-500 bottom-1/2 left-1/2 -translate-x-24 translate-y-24 rounded-bl-md"></div>
+                      <div className="absolute h-6 w-6 border-b-2 border-r-2 border-indigo-500 bottom-1/2 right-1/2 translate-x-24 translate-y-24 rounded-br-md"></div>
+                    </div>
+                  )}
+                  {!scanning && !error && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                      <p className="text-white text-center px-4">
+                        {selectedDeviceId ? "Camera initializing..." : "Select a camera from the dropdown"}
+                      </p>
+                    </div>
+                  )}
+                  {isProcessingAI && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
+                      <div className="text-center px-4">
+                        <div className="animate-spin inline-block w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mb-2"></div>
+                        <p className="text-white text-sm">Processing with AI...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-center mb-4">
+                <button
+                  type="button"
+                  onClick={handleRestartCamera}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  Restart Camera
+                </button>
+              </div>
+              
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
+                {scanning && !error
+                  ? t('Position the QR code within the frame to scan') 
+                  : t('Select a camera and start scanning')}
+              </p>
+            </>
+          )}
 
           {/* Debug/Testing buttons */}
           <div className="flex justify-center gap-3 mb-4 flex-wrap">
