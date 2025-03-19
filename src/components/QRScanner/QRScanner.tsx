@@ -31,6 +31,36 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   // Initialize code reader once
   const codeReader = new BrowserQRCodeReader();
 
+  // Enhanced close handler to ensure camera is properly stopped
+  const handleClose = () => {
+    console.log('Stopping camera and closing scanner');
+    setScanning(false);
+    
+    // Stop the scanner controls if they exist
+    if (controlsRef.current) {
+      console.log('Stopping scanner controls');
+      controlsRef.current.stop();
+      controlsRef.current = null;
+    }
+    
+    // Directly stop any video track from the video element
+    if (videoRef.current && videoRef.current.srcObject) {
+      console.log('Stopping video tracks directly');
+      const stream = videoRef.current.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+      
+      tracks.forEach(track => {
+        console.log(`Stopping track: ${track.kind} - ${track.label}`);
+        track.stop();
+      });
+      
+      videoRef.current.srcObject = null;
+    }
+    
+    // Call the parent component's onClose
+    onClose();
+  };
+
   // Toggle between QR scanner and PDF upload
   const toggleMode = () => {
     setIsPdfMode(!isPdfMode);
@@ -84,6 +114,13 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             .join(' ');
           
           fullText += pageText + '\n';
+          
+          // Check if we already have plenty of text (over 4000 words)
+          // const wordCount = fullText.split(/\s+/).length;
+          // if (wordCount > 5000) { // Getting a bit more than 4000 to ensure we have 4000 good words after cleanup
+          //   console.log(`Reached ${wordCount} words, stopping extraction to save processing time`);
+          //   break;
+          // }
         } catch (pageError) {
           console.warn(`Error extracting text from page ${i}:`, pageError);
         }
@@ -93,7 +130,14 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         throw new Error('No text could be extracted from the PDF');
       }
       
-      console.log(`Extracted ${fullText.length} characters of text`);
+      // Limit to approximately 4000 words
+      // const words = fullText.split(/\s+/);
+      // if (words.length > 4000) {
+      //   console.log(`Limiting extracted text from ${words.length} to 4000 words`);
+      //   fullText = words.slice(0, 4000).join(' ');
+      // }
+      
+      console.log(`Extracted ${fullText.length} characters of text (approx. ${fullText.split(/\s+/).length} words)`);
       return fullText;
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
@@ -121,14 +165,17 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       const extractedText = await extractTextFromPDF(file);
       console.log(`Successfully extracted ${extractedText.length} characters of text from PDF`);
       
+      // Show preview with word count
+      const wordCount = extractedText.split(/\s+/).length;
       if (extractedText.length > 200) {
         // Log a preview of the extracted text (first 200 chars)
-        console.log('Text preview:', extractedText.substring(0, 200) + '...');
+        console.log(`Text preview (${wordCount} words): ${extractedText.substring(0, 200)}...`);
       } else {
-        console.log('Extracted text:', extractedText);
+        console.log(`Extracted text (${wordCount} words): ${extractedText}`);
       }
       
-      setRawQRContent(extractedText);
+      // Update display with word count
+      setRawQRContent(`${extractedText}\n\n(Limited to ${wordCount} words for processing)`);
       
       // Process with AI
       const result = await processWithAI(extractedText);
@@ -252,6 +299,63 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     }
   };
 
+  // Component for the AI processing overlay
+  const AIProcessingOverlay = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
+      <div className="text-center px-6 py-5 bg-gray-900 bg-opacity-90 rounded-xl border border-indigo-500 max-w-xs mx-auto">
+        {/* Enhanced AI Processing Animation */}
+        <div className="mx-auto w-20 h-20 mb-4 relative">
+          {/* Outer rotating ring */}
+          <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-l-transparent animate-spin-slow"></div>
+          
+          {/* Middle pulsing ring */}
+          <div className="absolute inset-1 rounded-full border-2 border-blue-400 border-r-transparent animate-spin-reverse"></div>
+          
+          {/* Inner pulsing circle */}
+          <div className="absolute inset-3 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 animate-pulse"></div>
+          
+          {/* Scanning effect */}
+          <div className="absolute inset-0 overflow-hidden rounded-full">
+            <div className="h-full w-full bg-gradient-to-t from-transparent to-indigo-500 opacity-30 animate-scan"></div>
+          </div>
+          
+          {/* Center icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5 9.51472 14.4853 7.5 12 7.5C9.51472 7.5 7.5 9.51472 7.5 12C7.5 14.4853 9.51472 16.5 12 16.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 12H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M16.5 12H21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 7.5V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 21V16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          
+          {/* Floating particles */}
+          <div className="absolute -right-3 top-3 w-2 h-2 rounded-full bg-blue-400 animate-float" style={{ animationDelay: '0s' }}></div>
+          <div className="absolute -left-2 bottom-3 w-1.5 h-1.5 rounded-full bg-indigo-300 animate-float" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute left-6 -top-2 w-1 h-1 rounded-full bg-purple-400 animate-float" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute right-2 -bottom-1 w-1 h-1 rounded-full bg-indigo-200 animate-float" style={{ animationDelay: '1.5s' }}></div>
+        </div>
+        
+        <h4 className="text-indigo-300 font-semibold text-xl mb-2">AI Processing</h4>
+        <p className="text-white text-sm mb-4">
+          {isPdfMode ? t('Analyzing subscription details from your PDF...') : t('Extracting subscription information from QR code...')}
+        </p>
+        
+        {/* Text animation (typing effect) */}
+        <div className="flex justify-center space-x-1 text-xs font-mono text-indigo-300 bg-gray-800 py-1 px-3 rounded-md">
+          <span>AI</span>
+          <span className="inline-flex">
+            <span className="animate-blink">.</span>
+            <span className="animate-blink" style={{ animationDelay: '0.3s' }}>.</span>
+            <span className="animate-blink" style={{ animationDelay: '0.6s' }}>.</span>
+          </span>
+          <span className="typing-animation">analyzing</span>
+        </div>
+      </div>
+    </div>
+  );
+
   // Handle invalid QR code with countdown and auto-close
   useEffect(() => {
     if (invalidQRError) {
@@ -274,7 +378,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             }
             setInvalidQRError(null);
             setRawQRContent(null);
-            onClose();
+            handleClose(); // Use enhanced close handler instead of direct onClose
             return 0;
           }
           return prevCount - 1;
@@ -289,7 +393,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         timerRef.current = null;
       }
     };
-  }, [invalidQRError, onClose]);
+  }, [invalidQRError]);
 
   // For testing - use sample data
   const handleDebugScan = () => {
@@ -382,8 +486,20 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     
     // Clean up on unmount
     return () => {
+      console.log('QRScanner unmounting - cleaning up camera resources');
       if (controlsRef.current) {
         controlsRef.current.stop();
+        controlsRef.current = null;
+      }
+      
+      // Additional cleanup of any video stream
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => {
+          console.log('Stopping track on unmount:', track.kind, track.label);
+          track.stop();
+        });
+        videoRef.current.srcObject = null;
       }
     };
   }, []);
@@ -487,7 +603,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     
     // Clean up function
     return () => {
-      console.log('Cleaning up QR scanner');
+      console.log('Device changed or component unmounting - cleaning up QR scanner');
       if (controlsRef.current) {
         controlsRef.current.stop();
       }
@@ -570,7 +686,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {t('Close Now')}
@@ -582,120 +698,79 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-75 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            {isPdfMode ? t('Extract from PDF') : t('subscription.scanQR')}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 focus:outline-none"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        <div className="p-4">
-          {/* Toggle between QR and PDF modes */}
-          <div className="flex justify-center mb-4">
-            <div className="bg-gray-200 dark:bg-gray-700 rounded-full p-1">
-              <button
-                type="button"
-                onClick={() => !isPdfMode || toggleMode()}
-                className={`px-4 py-2 rounded-full text-sm font-medium focus:outline-none ${
-                  !isPdfMode 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                Scan QR
-              </button>
-              <button
-                type="button"
-                onClick={() => isPdfMode || toggleMode()}
-                className={`px-4 py-2 rounded-full text-sm font-medium focus:outline-none ${
-                  isPdfMode 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                Upload PDF
-              </button>
-            </div>
+    <div className="relative">
+      {/* Global AI Processing Overlay - will show when isProcessingAI is true regardless of mode */}
+      {isProcessingAI && <AIProcessingOverlay />}
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
+        <div className="p-3 sm:p-5">
+          <div className="mb-4 flex justify-between items-center">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+              {t(isPdfMode ? 'Upload PDF' : 'Scan QR Code')}
+            </h3>
+            
+            {/* Mode toggle button */}
+            <button
+              type="button"
+              onClick={toggleMode}
+              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              {isPdfMode ? (
+                <span className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                  </svg>
+                  {t('Switch to QR')}
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                  </svg>
+                  {t('Switch to PDF')}
+                </span>
+              )}
+            </button>
           </div>
-
+          
+          {/* Error message */}
           {error && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900 p-3 rounded-md">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded-md">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              <p className="mt-2 text-xs text-red-700 dark:text-red-300">
-                {error.includes('denied') && 'Please check your browser settings to allow camera access and refresh this page.'}
-              </p>
             </div>
           )}
           
-          {isProcessingAI && (
-            <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900 p-4 rounded-md shadow-md overflow-hidden relative">
-              <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-              <div className="flex items-center">
-                <div className="relative mr-4 flex-shrink-0">
-                  {/* AI Brain Processing Animation */}
-                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center relative overflow-hidden">
-                    {/* Pulsing circles */}
-                    <div className="absolute w-12 h-12 rounded-full bg-indigo-400 opacity-20 animate-ping-slow"></div>
-                    <div className="absolute w-8 h-8 rounded-full bg-purple-400 opacity-20 animate-ping"></div>
-                    
-                    {/* Brain icon */}
-                    <svg className="w-6 h-6 text-white z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    
-                    {/* Moving dots for "processing" effect */}
-                    <div className="absolute bottom-1 flex space-x-0.5 justify-center">
-                      <div className="w-1 h-1 bg-white rounded-full opacity-80 animate-pulse"></div>
-                      <div className="w-1 h-1 bg-white rounded-full opacity-80 animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                      <div className="w-1 h-1 bg-white rounded-full opacity-80 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex-grow">
-                  <p className="text-sm font-medium text-indigo-800 dark:text-indigo-200">
-                    {isPdfMode ? 'Processing PDF with AI' : 'Analyzing QR code with AI'}
-                  </p>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-300 mt-1">
-                    {isPdfMode 
-                      ? 'Extracting text and identifying key subscription details...' 
-                      : 'Reading content and identifying subscription information...'}
-                  </p>
-                  
-                  {/* Progress bar with shimmer effect */}
-                  <div className="mt-2 h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full relative overflow-hidden animate-progress-indeterminate">
-                      <div className="absolute inset-0 bg-shimmer"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Invalid QR error */}
+          {invalidQRError && (
+            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-800 rounded-md">
+              <p className="text-sm text-amber-800 dark:text-amber-200">{invalidQRError}</p>
+              {rawQRContent && (
+                <details className="mt-2">
+                  <summary className="text-xs font-medium text-amber-600 dark:text-amber-300 cursor-pointer">
+                    {t('Show Raw Content')}
+                  </summary>
+                  <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-950 rounded text-xs overflow-auto max-h-40">
+                    {rawQRContent}
+                  </pre>
+                </details>
+              )}
             </div>
           )}
-
+          
           {isPdfMode ? (
-            // PDF Upload Mode
-            <div className="flex flex-col items-center justify-center">
-              <div className="mb-6 w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors cursor-pointer" onClick={handleUploadClick}>
-                <div className="flex flex-col items-center justify-center">
-                  <svg className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Click to upload a PDF</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">PDF files only</p>
-                </div>
-
+            // PDF Mode
+            <div>
+              <div className="mb-4 flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <button
+                  type="button"
+                  onClick={handleUploadClick}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  {t('Select PDF File')}
+                </button>
                 <input 
                   type="file" 
                   className="hidden" 
@@ -706,38 +781,38 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
               </div>
               
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
-                The system will extract text from the PDF and analyze it to find subscription information.
-                For best results, use PDFs with selectable text (not scanned images).
-                PDF should include subscription details like dates, amounts, and service information.
+                {t('The system will extract text from the PDF and analyze it to find subscription information.')}
+                <br className="hidden sm:block" />
+                {t('For best results, use PDFs with selectable text (not scanned images).')}
               </p>
             </div>
           ) : (
             // QR Scanner Mode
             <>
-              <div className="mb-4">
-                <label htmlFor="camera-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="mb-3">
+                <label htmlFor="camera-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   {t('Select Camera')}
                 </label>
                 <select
                   id="camera-select"
                   value={selectedDeviceId}
                   onChange={handleDeviceChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800 text-sm"
                 >
                   {devices.length === 0 ? (
-                    <option value="">Loading cameras...</option>
+                    <option value="">{t('Loading cameras...')}</option>
                   ) : (
                     devices.map(device => (
                       <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Camera ${devices.indexOf(device) + 1}`}
+                        {device.label || `${t('Camera')} ${devices.indexOf(device) + 1}`}
                       </option>
                     ))
                   )}
                 </select>
               </div>
               
-              <div className="flex justify-center mb-4">
-                <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
+              <div className="flex justify-center mb-3">
+                <div className="relative w-full aspect-square max-h-[60vh] bg-black rounded-md overflow-hidden">
                   <video
                     ref={videoRef}
                     className="absolute inset-0 w-full h-full object-cover"
@@ -747,79 +822,34 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
                   />
                   {scanning && !error && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="h-48 w-48 border-2 border-indigo-500 rounded-lg opacity-70"></div>
-                      <div className="absolute h-6 w-6 border-t-2 border-l-2 border-indigo-500 top-1/2 left-1/2 -translate-x-24 -translate-y-24 rounded-tl-md"></div>
-                      <div className="absolute h-6 w-6 border-t-2 border-r-2 border-indigo-500 top-1/2 right-1/2 translate-x-24 -translate-y-24 rounded-tr-md"></div>
-                      <div className="absolute h-6 w-6 border-b-2 border-l-2 border-indigo-500 bottom-1/2 left-1/2 -translate-x-24 translate-y-24 rounded-bl-md"></div>
-                      <div className="absolute h-6 w-6 border-b-2 border-r-2 border-indigo-500 bottom-1/2 right-1/2 translate-x-24 translate-y-24 rounded-br-md"></div>
+                      <div className="h-2/3 w-2/3 border-2 border-indigo-500 rounded-lg opacity-70"></div>
+                      <div className="absolute h-8 w-8 border-t-2 border-l-2 border-indigo-500 top-1/6 left-1/6 rounded-tl-md"></div>
+                      <div className="absolute h-8 w-8 border-t-2 border-r-2 border-indigo-500 top-1/6 right-1/6 rounded-tr-md"></div>
+                      <div className="absolute h-8 w-8 border-b-2 border-l-2 border-indigo-500 bottom-1/6 left-1/6 rounded-bl-md"></div>
+                      <div className="absolute h-8 w-8 border-b-2 border-r-2 border-indigo-500 bottom-1/6 right-1/6 rounded-br-md"></div>
                     </div>
                   )}
                   {!scanning && !error && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                      <p className="text-white text-center px-4">
-                        {selectedDeviceId ? "Camera initializing..." : "Select a camera from the dropdown"}
+                      <p className="text-white text-center px-4 text-sm">
+                        {selectedDeviceId ? t('Camera initializing...') : t('Select a camera from the dropdown')}
                       </p>
-                    </div>
-                  )}
-                  {isProcessingAI && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
-                      <div className="text-center px-6 py-5 bg-gray-900 bg-opacity-80 rounded-xl border border-indigo-500 max-w-xs mx-auto">
-                        {/* AI Processing Animation */}
-                        <div className="mx-auto w-16 h-16 mb-4 relative">
-                          {/* Outer rotating ring */}
-                          <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-l-transparent animate-spin-slow"></div>
-                          
-                          {/* Inner pulsing circle */}
-                          <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 animate-pulse"></div>
-                          
-                          {/* Center icon */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5 9.51472 14.4853 7.5 12 7.5C9.51472 7.5 7.5 9.51472 7.5 12C7.5 14.4853 9.51472 16.5 12 16.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M3 12H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M16.5 12H21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M12 7.5V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M12 21V16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </div>
-                          
-                          {/* Floating particles */}
-                          <div className="absolute -right-1 top-2 w-2 h-2 rounded-full bg-blue-400 animate-float" style={{ animationDelay: '0s' }}></div>
-                          <div className="absolute -left-1 bottom-2 w-1.5 h-1.5 rounded-full bg-indigo-300 animate-float" style={{ animationDelay: '0.5s' }}></div>
-                          <div className="absolute left-4 -top-1 w-1 h-1 rounded-full bg-purple-400 animate-float" style={{ animationDelay: '1s' }}></div>
-                        </div>
-                        
-                        <h4 className="text-indigo-300 font-semibold text-lg mb-1">AI Processing</h4>
-                        <p className="text-white text-sm mb-3">
-                          {isPdfMode ? 'Analyzing PDF content...' : 'Processing QR code data...'}
-                        </p>
-                        
-                        {/* Text animation (typing effect) */}
-                        <div className="flex justify-center space-x-1 text-xs text-indigo-300">
-                          <span>Processing</span>
-                          <span className="inline-flex">
-                            <span className="animate-blink">.</span>
-                            <span className="animate-blink" style={{ animationDelay: '0.3s' }}>.</span>
-                            <span className="animate-blink" style={{ animationDelay: '0.6s' }}>.</span>
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   )}
                 </div>
               </div>
               
-              <div className="flex justify-center mb-4">
+              <div className="flex justify-center mb-3">
                 <button
                   type="button"
                   onClick={handleRestartCamera}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  Restart Camera
+                  {t('Restart Camera')}
                 </button>
               </div>
               
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center mb-3">
                 {scanning && !error
                   ? t('Position the QR code within the frame to scan') 
                   : t('Select a camera and start scanning')}
@@ -827,37 +857,37 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             </>
           )}
 
-          {/* Debug/Testing buttons */}
-          <div className="flex justify-center gap-3 mb-4 flex-wrap">
+          {/* Debug/Testing buttons in a more compact mobile-friendly layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
             <button
               type="button"
               onClick={handleDebugScan}
-              className="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 py-1.5 text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Use Sample Data
+              {t('Use Sample Data')}
             </button>
             <button
               type="button"
               onClick={handleInvalidQRTest}
-              className="px-4 py-2 text-sm font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 dark:text-orange-200 dark:bg-orange-900 dark:hover:bg-orange-800 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="px-3 py-1.5 text-xs sm:text-sm font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 dark:text-orange-200 dark:bg-orange-900 dark:hover:bg-orange-800 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
-              Test Invalid QR
+              {t('Test Invalid QR')}
             </button>
             <button
               type="button"
               onClick={handleAIProcessingTest}
-              className="px-4 py-2 text-sm font-medium text-purple-700 bg-purple-100 hover:bg-purple-200 dark:text-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="px-3 py-1.5 text-xs sm:text-sm font-medium text-purple-700 bg-purple-100 hover:bg-purple-200 dark:text-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              Test AI Processing
+              {t('Test AI Processing')}
             </button>
           </div>
         </div>
         
-        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end">
+        <div className="px-3 py-3 sm:px-4 sm:py-3 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end">
           <button
             type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onClick={handleClose}
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {t('common.cancel')}
           </button>

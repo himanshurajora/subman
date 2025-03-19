@@ -78,19 +78,19 @@ export function AddSubscription() {
   };
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="max-w-3xl mx-auto px-4 py-4 sm:py-6">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           {t("Add New Subscription")}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
           {t("Fill in the details to add a new subscription")}
         </p>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900 p-4 rounded-md">
-          <p className="text-red-800 dark:text-red-200">{error}</p>
+        <div className="mb-4 sm:mb-6 bg-red-50 dark:bg-red-900 p-3 sm:p-4 rounded-md">
+          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
         </div>
       )}
 

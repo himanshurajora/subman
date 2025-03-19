@@ -110,6 +110,19 @@
     "exportPDF": "Export as PDF",
     "saving": "Saving...",
     "deleting": "Deleting...",
-    "updating": "Updating..."
+    "updating": "Updating...",
+    "name": "Name",
+    "type": "Type",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "amount": "Amount",
+    "currency": "Currency",
+    "provider": "Provider",
+    "notes": "Notes",
+    "reminderDays": "Reminder Days",
+    "attachments": "Attachments",
+    "scanQR": "Scan QR Code",
+    "manualEntry": "Manual Entry",
+    "reminderDaysHelp": "How many days before the subscription ends should we remind you"
   }
 } 

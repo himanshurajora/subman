@@ -470,208 +470,241 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Name field */}
-          <div className="col-span-1 md:col-span-2">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('subscription.name')} *
-            </label>
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 md:p-6">
+      {/* Mobile-friendly heading shown only on small screens */}
+      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white md:hidden">
+        {t('Subscription Details')}
+      </h2>
+      
+      {/* Basic Form Fields */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 mb-4">
+        <div className="sm:col-span-2">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.name')} *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className={`w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white text-base ${errors.name ? 'border-red-500' : ''}`}
+            placeholder={t('Enter subscription name')}
+          />
+          {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.startDate')} *
+          </label>
+          <input
+            type="date"
+            id="startDate"
+            name="startDate"
+            value={formData.startDate}
+            onChange={handleChange}
+            className={`w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white ${errors.startDate ? 'border-red-500' : ''}`}
+          />
+          {errors.startDate && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.startDate}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.endDate')} *
+          </label>
+          <input
+            type="date"
+            id="endDate"
+            name="endDate"
+            value={formData.endDate}
+            onChange={handleChange}
+            className={`w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white ${errors.endDate ? 'border-red-500' : ''}`}
+          />
+          {errors.endDate && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.endDate}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.provider')} *
+          </label>
+          <input
+            type="text"
+            id="provider"
+            name="provider"
+            value={formData.provider}
+            onChange={handleChange}
+            className={`w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white ${errors.provider ? 'border-red-500' : ''}`}
+            placeholder={t('Enter provider name')}
+          />
+          {errors.provider && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.provider}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.type')} *
+          </label>
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
+          >
+            <option value="vehicle">{t('subscriptionTypes.vehicle')}</option>
+            <option value="membership">{t('subscriptionTypes.membership')}</option>
+            <option value="utility">{t('subscriptionTypes.utility')}</option>
+            <option value="insurance">{t('subscriptionTypes.insurance')}</option>
+            <option value="other">{t('subscriptionTypes.other')}</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.amount')}
+          </label>
+          <div className="relative rounded-md">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <span className="text-gray-500 dark:text-gray-400 sm:text-sm">₹</span>
+            </div>
             <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-            />
-          </div>
-          
-          {/* Provider field */}
-          <div>
-            <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('subscription.provider')}
-            </label>
-            <input
-              id="provider"
-              name="provider"
-              type="text"
-              value={formData.provider}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-            />
-          </div>
-          
-          {/* Type field */}
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('subscription.type')} *
-            </label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-            >
-              <option value="vehicle">{t('subscriptionTypes.vehicle')}</option>
-              <option value="membership">{t('subscriptionTypes.membership')}</option>
-              <option value="utility">{t('subscriptionTypes.utility')}</option>
-              <option value="insurance">{t('subscriptionTypes.insurance')}</option>
-              <option value="other">{t('subscriptionTypes.other')}</option>
-            </select>
-          </div>
-          
-          {/* Start date field */}
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('subscription.startDate')} *
-            </label>
-            <input
-              id="startDate"
-              name="startDate"
-              type="date"
-              required
-              value={formData.startDate}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-            />
-          </div>
-          
-          {/* End date field */}
-          <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('subscription.endDate')}
-            </label>
-            <input
-              id="endDate"
-              name="endDate"
-              type="date"
-              value={formData.endDate}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-            />
-          </div>
-          
-          {/* Amount field - show with fixed INR currency */}
-          <div className="col-span-1 md:col-span-2">
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('subscription.amount')} (₹) *
-            </label>
-            <input
+              type="number"
               id="amount"
               name="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              required
               value={formData.amount}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
+              min="0"
+              step="0.01"
+              className="block w-full rounded-md border-gray-300 pl-9 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
             />
           </div>
-          
-          {/* Reminder toggle */}
-          <div className="col-span-1 md:col-span-2 flex items-center">
+        </div>
+
+        <div>
+          <label htmlFor="currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('common.currency')}
+          </label>
+          <select
+            id="currency"
+            name="currency"
+            value={formData.currency}
+            onChange={handleChange}
+            className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
+            disabled
+          >
+            <option value="INR">INR - Indian Rupee</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
+          <div className="w-full sm:w-1/2">
+            <label htmlFor="reminderDays" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('common.reminderDays')}
+            </label>
             <input
+              type="number"
+              id="reminderDays"
+              name="reminderDays"
+              value={formData.reminderDays}
+              onChange={handleChange}
+              min="1"
+              max="90"
+              className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+          <div className="flex items-center mt-5 sm:mt-6">
+            <input
+              type="checkbox"
               id="reminder"
               name="reminder"
-              type="checkbox"
-              checked={formData.reminder || false}
+              checked={formData.reminder}
               onChange={handleChange}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
             />
             <label htmlFor="reminder" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-              Subscription reminder
+              {t('Enable Reminder')}
             </label>
           </div>
-          
-          {/* Reminder days field - only show if reminder is enabled */}
-          {formData.reminder && (
-            <div className="col-span-1 md:col-span-2">
-              <label htmlFor="reminderDays" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('subscription.reminderDays')}
-              </label>
-              <input
-                id="reminderDays"
-                name="reminderDays"
-                type="number"
-                min="1"
-                max="30"
-                value={formData.reminderDays}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white dark:bg-gray-800"
-              />
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {t('subscription.reminderDaysHelp')}
-              </p>
-            </div>
-          )}
         </div>
-        
-        {/* Render contact information fields */}
-        {renderContactInfoFields()}
-        
-        {formData.type !== 'other' && (
-          <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              {t(`subscriptionTypes.${formData.type}`)} {t('subscription.details')}
-            </h3>
-            
-            {renderTypeSpecificFields()}
-          </div>
-        )}
-        
-        {/* Render any additional dynamic fields detected by AI */}
-        {renderDynamicFields()}
-        
-        <div className="mt-8 flex justify-between items-center">
-          <div>
-            <Button 
-              type="button"
-              variant="secondary"
-              onClick={() => setShowQRScanner(true)}
-            >
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd" />
-                  <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 100-2H4a1 1 0 100 2h3zM17 13a1 1 0 01-1 1h-2a1 1 0 110-2h2a1 1 0 011 1zM16 17a1 1 0 100-2h-3a1 1 0 100 2h3z" />
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <span className="text-xs block mt-1 opacity-70">QR Code / PDF</span>
-            </Button>
-          </div>
-          
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="tertiary"
-              onClick={onCancel}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isLoading}
-            >
-              {isLoading ? t('common.loading') : t('common.save')}
-            </Button>
-          </div>
-        </div>
-      </form>
-      
-      {showQRScanner && (
-        <QRScanner 
-          onScan={handleQRScan}
-          onClose={() => setShowQRScanner(false)}
+      </div>
+
+      {/* Contact Information Fields */}
+      {renderContactInfoFields()}
+
+      {/* Type Specific Fields */}
+      <div className="mb-6">
+        {renderTypeSpecificFields()}
+      </div>
+
+      {/* Dynamic Fields */}
+      {renderDynamicFields()}
+
+      <div className="mb-4">
+        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {t('common.notes')}
+        </label>
+        <textarea
+          id="notes"
+          name="notes"
+          value={formData.notes || ''}
+          onChange={handleChange}
+          rows={3}
+          className="w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
+          placeholder={t('Add any additional notes here')}
         />
+      </div>
+
+      {/* QR Scanner Button */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setShowQRScanner(true)}
+          className="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5 mr-2" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+          </svg>
+          {t('Scan QR Code/PDF')}
+        </button>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row-reverse gap-3 sm:gap-2 mt-6">
+        <Button
+          type="submit"
+          variant="primary"
+          isLoading={isLoading}
+          fullWidth={true}
+          className="order-1 sm:order-none"
+        >
+          {t('common.save')}
+        </Button>
+        <Button
+          type="button"
+          variant="tertiary"
+          onClick={onCancel}
+          fullWidth={true}
+        >
+          {t('common.cancel')}
+        </Button>
+      </div>
+
+      {showQRScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <QRScanner
+              onScan={handleQRScan}
+              onClose={() => setShowQRScanner(false)}
+            />
+          </div>
+        </div>
       )}
-    </div>
+    </form>
   );
 } 
