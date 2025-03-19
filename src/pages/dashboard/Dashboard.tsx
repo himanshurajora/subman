@@ -248,6 +248,69 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Expiring Subscriptions List */}
+      {expiringSubscriptions.length > 0 && (
+        <div className="mt-8 mb-6">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+                {t("dashboard.aboutToExpire")}
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                {t("dashboard.subscriptionsExpiringSoon")}
+              </p>
+            </div>
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+              {expiringSubscriptions
+                .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
+                .map((subscription) => {
+                  const endDate = new Date(subscription.endDate);
+                  const daysRemaining = Math.ceil(
+                    (endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
+                  );
+                  
+                  return (
+                    <li key={subscription.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <h4 className="text-md font-medium text-gray-900 dark:text-white">
+                            {subscription.name}
+                          </h4>
+                          <div className="flex items-center mt-1">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {t(`subscriptionTypes.${subscription.type}`)} • {subscription.provider}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="mr-4 text-right">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {new Intl.DateTimeFormat('default', { dateStyle: 'medium' }).format(endDate)}
+                            </div>
+                            <div className={`text-sm ${daysRemaining <= 7 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                              {daysRemaining === 0 
+                                ? t("dashboard.expiringToday")
+                                : daysRemaining === 1
+                                  ? t("dashboard.expiringTomorrow")
+                                  : t("dashboard.daysRemaining", { days: daysRemaining })}
+                            </div>
+                          </div>
+                          <Link
+                            to={`/subscriptions/${subscription.id}`}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-100 dark:bg-indigo-900 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            {t("common.view")}
+                          </Link>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 flex justify-center">
         <Link
           to="/subscriptions/add"

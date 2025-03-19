@@ -28,7 +28,12 @@
     "totalSubscriptions": "कुल सब्सक्रिप्शन",
     "activeSubscriptions": "सक्रिय सब्सक्रिप्शन",
     "expiringSubscriptions": "जल्द समाप्त होने वाले",
-    "totalSpending": "कुल खर्च"
+    "totalSpending": "कुल खर्च",
+    "aboutToExpire": "समाप्त होने वाले सब्सक्रिप्शन",
+    "subscriptionsExpiringSoon": "ये सब्सक्रिप्शन जल्द ही समाप्त हो जाएंगे। सेवा में कोई रुकावट न आए, इसके लिए कार्रवाई करें।",
+    "expiringToday": "आज समाप्त हो रहा है!",
+    "expiringTomorrow": "कल समाप्त हो रहा है",
+    "daysRemaining": "{{days}} दिन शेष"
   },
   "subscription": {
     "add": "सब्सक्रिप्शन जोड़ें",

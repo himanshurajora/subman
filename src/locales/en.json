@@ -28,7 +28,12 @@
     "totalSubscriptions": "Total Subscriptions",
     "activeSubscriptions": "Active Subscriptions",
     "expiringSubscriptions": "Expiring Soon",
-    "totalSpending": "Total Spending"
+    "totalSpending": "Total Spending",
+    "aboutToExpire": "Subscriptions About to Expire",
+    "subscriptionsExpiringSoon": "These subscriptions will expire soon. Take action to avoid service interruption.",
+    "expiringToday": "Expires today!",
+    "expiringTomorrow": "Expires tomorrow",
+    "daysRemaining": "{{days}} days remaining"
   },
   "subscription": {
     "add": "Add Subscription",
