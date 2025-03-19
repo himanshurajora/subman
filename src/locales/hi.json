@@ -1,0 +1,106 @@
+{
+  "app": {
+    "name": "सब्सक्रिप्शन मैनेजर",
+    "tagline": "अपने सभी सब्सक्रिप्शन एक जगह पर प्रबंधित करें"
+  },
+  "navigation": {
+    "home": "होम",
+    "dashboard": "डैशबोर्ड",
+    "subscriptions": "सब्सक्रिप्शन",
+    "profile": "प्रोफाइल",
+    "settings": "सेटिंग्स",
+    "logout": "लॉगआउट",
+    "login": "लॉगिन",
+    "signup": "साइन अप"
+  },
+  "auth": {
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "displayName": "प्रदर्शित नाम",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "noAccount": "खाता नहीं है?",
+    "hasAccount": "पहले से खाता है?",
+    "loginButton": "लॉगिन",
+    "signupButton": "साइन अप",
+    "resetPassword": "पासवर्ड रीसेट करें"
+  },
+  "dashboard": {
+    "totalSubscriptions": "कुल सब्सक्रिप्शन",
+    "activeSubscriptions": "सक्रिय सब्सक्रिप्शन",
+    "expiringSubscriptions": "जल्द समाप्त होने वाले",
+    "monthlySpending": "मासिक खर्च"
+  },
+  "subscription": {
+    "add": "सब्सक्रिप्शन जोड़ें",
+    "edit": "सब्सक्रिप्शन संपादित करें",
+    "delete": "सब्सक्रिप्शन हटाएं",
+    "details": "सब्सक्रिप्शन विवरण",
+    "name": "नाम",
+    "type": "प्रकार",
+    "startDate": "आरंभ तिथि",
+    "endDate": "समाप्ति तिथि",
+    "amount": "राशि",
+    "currency": "मुद्रा",
+    "provider": "प्रदाता",
+    "notes": "नोट्स",
+    "reminderDays": "रिमाइंडर दिन",
+    "attachments": "अटैचमेंट",
+    "scanQR": "QR कोड स्कैन करें",
+    "manualEntry": "मैनुअल प्रविष्टि"
+  },
+  "subscriptionTypes": {
+    "vehicle": "वाहन",
+    "membership": "सदस्यता",
+    "utility": "उपयोगिता",
+    "insurance": "बीमा",
+    "other": "अन्य"
+  },
+  "vehicleSubscription": {
+    "vehicleNumber": "वाहन नंबर",
+    "vehicleType": "वाहन प्रकार",
+    "registrationType": "पंजीकरण प्रकार",
+    "owner": "मालिक का नाम"
+  },
+  "membershipSubscription": {
+    "membershipId": "सदस्यता आईडी",
+    "benefits": "लाभ",
+    "level": "सदस्यता स्तर"
+  },
+  "utilitySubscription": {
+    "utilityType": "उपयोगिता प्रकार",
+    "accountNumber": "खाता संख्या",
+    "serviceAddress": "सेवा पता"
+  },
+  "insuranceSubscription": {
+    "policyNumber": "पॉलिसी नंबर",
+    "coverageType": "कवरेज प्रकार",
+    "beneficiaries": "लाभार्थी",
+    "coverage": "कवरेज राशि"
+  },
+  "settings": {
+    "language": "भाषा",
+    "theme": "थीम",
+    "dark": "डार्क",
+    "light": "लाइट",
+    "notifications": "नोटिफिकेशन",
+    "email": "ईमेल नोटिफिकेशन",
+    "push": "पुश नोटिफिकेशन"
+  },
+  "common": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "view": "देखें",
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "confirm": "पुष्टि करें",
+    "back": "वापस",
+    "next": "अगला",
+    "search": "खोजें",
+    "filter": "फ़िल्टर",
+    "exportCSV": "CSV के रूप में निर्यात करें",
+    "exportPDF": "PDF के रूप में निर्यात करें"
+  }
+} 

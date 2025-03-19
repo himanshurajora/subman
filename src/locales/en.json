@@ -1,0 +1,106 @@
+{
+  "app": {
+    "name": "Subscription Manager",
+    "tagline": "Manage all your subscriptions in one place"
+  },
+  "navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "subscriptions": "Subscriptions",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign Up"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Display Name",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginButton": "Login",
+    "signupButton": "Sign Up",
+    "resetPassword": "Reset Password"
+  },
+  "dashboard": {
+    "totalSubscriptions": "Total Subscriptions",
+    "activeSubscriptions": "Active Subscriptions",
+    "expiringSubscriptions": "Expiring Soon",
+    "monthlySpending": "Monthly Spending"
+  },
+  "subscription": {
+    "add": "Add Subscription",
+    "edit": "Edit Subscription",
+    "delete": "Delete Subscription",
+    "details": "Subscription Details",
+    "name": "Name",
+    "type": "Type",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "amount": "Amount",
+    "currency": "Currency",
+    "provider": "Provider",
+    "notes": "Notes",
+    "reminderDays": "Reminder Days",
+    "attachments": "Attachments",
+    "scanQR": "Scan QR Code",
+    "manualEntry": "Manual Entry"
+  },
+  "subscriptionTypes": {
+    "vehicle": "Vehicle",
+    "membership": "Membership",
+    "utility": "Utility",
+    "insurance": "Insurance",
+    "other": "Other"
+  },
+  "vehicleSubscription": {
+    "vehicleNumber": "Vehicle Number",
+    "vehicleType": "Vehicle Type",
+    "registrationType": "Registration Type",
+    "owner": "Owner Name"
+  },
+  "membershipSubscription": {
+    "membershipId": "Membership ID",
+    "benefits": "Benefits",
+    "level": "Membership Level"
+  },
+  "utilitySubscription": {
+    "utilityType": "Utility Type",
+    "accountNumber": "Account Number",
+    "serviceAddress": "Service Address"
+  },
+  "insuranceSubscription": {
+    "policyNumber": "Policy Number",
+    "coverageType": "Coverage Type",
+    "beneficiaries": "Beneficiaries",
+    "coverage": "Coverage Amount"
+  },
+  "settings": {
+    "language": "Language",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "notifications": "Notifications",
+    "email": "Email Notifications",
+    "push": "Push Notifications"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "filter": "Filter",
+    "exportCSV": "Export as CSV",
+    "exportPDF": "Export as PDF"
+  }
+} 
