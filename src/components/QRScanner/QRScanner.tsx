@@ -1,12 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { QRCodeData } from '../../types';
 import { getVertexAI, getGenerativeModel } from 'firebase/vertexai';
 import { getApp } from 'firebase/app';
 import * as pdfjsLib from 'pdfjs-dist';
 // Configure PDF.js to use a CDN worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+
+// A helper function for cross-browser camera access
+// Instead of modifying navigator.mediaDevices, we create a compatible function
+function getCamera(constraints: MediaStreamConstraints): Promise<MediaStream> {
+  // If mediaDevices.getUserMedia is available, use it
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  
+  // For older browsers, try legacy APIs (without assigning to read-only properties)
+  const getUserMedia = 
+    (navigator as any).webkitGetUserMedia || 
+    (navigator as any).mozGetUserMedia ||
+    (navigator as any).msGetUserMedia;
+
+  if (getUserMedia) {
+    return new Promise<MediaStream>((resolve, reject) => {
+      getUserMedia.call(navigator, constraints, resolve, reject);
+    });
+  }
+  
+  // If no method is available, reject with a helpful error
+  return Promise.reject(
+    new Error('Camera access is not supported in this browser. Please try a different browser or device.')
+  );
+}
+
 interface QRScannerProps {
   onScan: (data: QRCodeData) => void;
   onClose: () => void;
@@ -28,8 +56,16 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [isPdfMode, setIsPdfMode] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize code reader once
-  const codeReader = new BrowserQRCodeReader();
+  // Initialize code reader with proper hints using the proper Map format
+  const hints = new Map();
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+  hints.set(DecodeHintType.TRY_HARDER, true);
+  // Add support for international text in QR codes
+  hints.set(DecodeHintType.CHARACTER_SET, "UTF-8");
+  
+  const codeReader = new BrowserQRCodeReader(hints, {
+    delayBetweenScanAttempts: 100, // Scan more frequently for better mobile performance
+  });
 
   // Enhanced close handler to ensure camera is properly stopped
   const handleClose = () => {
@@ -453,25 +489,51 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       try {
         console.log('Setting up camera...');
         
-        // First attempt to get permission by requesting user media
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        
-        // Now we should have permission, enumerate devices
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        
-        console.log('Available video devices:', videoDevices);
-        
-        if (videoDevices.length === 0) {
-          setError('No camera found on your device');
-          return;
+        // Try to access the camera with our cross-browser helper
+        try {
+          const stream = await getCamera({ 
+            video: { 
+              facingMode: 'environment' // Prefer back camera for scanning QR codes
+            } 
+          });
+          
+          // If we got here, camera access was successful
+          console.log('Camera access granted');
+          
+          // Now try to enumerate devices if the API is available
+          if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            console.log('Available video devices:', videoDevices);
+            
+            if (videoDevices.length === 0) {
+              setError('No camera found on your device');
+              return;
+            }
+            
+            setDevices(videoDevices);
+            setSelectedDeviceId(videoDevices[0].deviceId);
+          } else {
+            // If enumerate devices is not available, we'll just use the current stream
+            console.log('enumerateDevices not supported, using default camera');
+            // Create a fake device entry with the proper interface implementation
+            setDevices([{
+              deviceId: '',
+              kind: 'videoinput' as MediaDeviceKind,
+              groupId: '',
+              label: 'Default Camera',
+              toJSON: function() { return this; } // Implementing required toJSON method
+            }]);
+            setSelectedDeviceId('');
+          }
+          
+          // Clean up initial stream
+          stream.getTracks().forEach(track => track.stop());
+        } catch (err: any) {
+          console.error('Camera access error:', err);
+          throw err; // Re-throw to be caught by the outer try/catch
         }
-        
-        setDevices(videoDevices);
-        setSelectedDeviceId(videoDevices[0].deviceId);
-        
-        // Clean up initial stream
-        stream.getTracks().forEach(track => track.stop());
       } catch (err: any) {
         console.error('Camera setup error:', err);
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
@@ -506,9 +568,10 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
 
   // Start/stop scanning when device changes or component unmounts
   useEffect(() => {
-    if (!selectedDeviceId || !videoRef.current) return;
+    if (!videoRef.current) return;
     
-    console.log('Starting scanner with device:', selectedDeviceId);
+    // selectedDeviceId might be empty for browsers that don't support enumeration
+    console.log('Starting scanner with device:', selectedDeviceId || 'default camera');
     setScanning(true);
     setError('');
     
@@ -520,9 +583,10 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           controlsRef.current = null;
         }
         
-        console.log('Creating new scanner');
+        console.log('Creating new scanner with enhanced configuration');
         const controls = await codeReader.decodeFromVideoDevice(
-          selectedDeviceId,
+          // Use null for default camera if deviceId is empty to handle older browsers
+          selectedDeviceId || undefined,
           videoRef.current!,
           async (result, error) => {
             if (result) {
@@ -853,6 +917,11 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
                 {scanning && !error
                   ? t('Position the QR code within the frame to scan') 
                   : t('Select a camera and start scanning')}
+              </p>
+              
+              {/* Mobile browser compatibility notice */}
+              <p className="text-xs text-amber-600 dark:text-amber-400 text-center mb-3">
+                {t('If the camera appears to be inactive on your mobile device, please ensure you have granted camera permissions and try the "Restart Camera" button.')}
               </p>
             </>
           )}
