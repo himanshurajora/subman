@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeData, SubscriptionFormFields } from '../../types';
 import { QRScanner } from '../QRScanner/QRScanner';
-import { Button } from '../UI/Button';
 
 interface SubscriptionFormProps {
   initialData?: Partial<SubscriptionFormFields>;

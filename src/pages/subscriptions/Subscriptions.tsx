@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { db, collection, query, where, getDocs } from "../../firebase";
+import { collection, db, getDocs, query, where } from "../../firebase";
 import { Subscription } from "../../types";
 
 export function Subscriptions() {
@@ -13,7 +13,6 @@ export function Subscriptions() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "expired">("all");
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Create an AbortController to cancel the fetch if component unmounts
