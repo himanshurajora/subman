@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { db, collection, doc, setDoc } from "../../firebase";
-import { SubscriptionFormFields } from "../../types";
+import { SubscriptionFormFields, QRCodeData } from "../../types";
 import { SubscriptionForm } from "../../components/Subscription/SubscriptionForm";
 
 export function AddSubscription() {
@@ -12,6 +12,22 @@ export function AddSubscription() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const [initialData, setInitialData] = useState<Partial<SubscriptionFormFields>>({});
+
+  // Check if we have QR scan data in location state
+  useEffect(() => {
+    if (location.state?.prefillData) {
+      const qrData = location.state.prefillData as QRCodeData;
+      console.log("Received QR data:", qrData);
+      
+      // Pre-fill form with QR data
+      setInitialData({
+        ...qrData.data,
+        type: qrData.type
+      });
+    }
+  }, [location.state]);
 
   const handleSubmit = async (data: SubscriptionFormFields) => {
     if (!currentUser) return;
@@ -78,8 +94,8 @@ export function AddSubscription() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-4 sm:py-6">
-      <div className="mb-4 sm:mb-6">
+    <div className="max-w-3xl mx-auto px-1 sm:px-4 py-3 sm:py-6">
+      <div className="mb-3 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           {t("Add New Subscription")}
         </h1>
@@ -89,12 +105,13 @@ export function AddSubscription() {
       </div>
 
       {error && (
-        <div className="mb-4 sm:mb-6 bg-red-50 dark:bg-red-900 p-3 sm:p-4 rounded-md">
+        <div className="mb-3 sm:mb-6 bg-red-50 dark:bg-red-900 p-2 sm:p-4 rounded-md">
           <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
         </div>
       )}
 
       <SubscriptionForm
+        initialData={initialData}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         isLoading={loading}

@@ -113,42 +113,46 @@ export function ViewSubscription() {
   const isExpired = new Date(subscription.endDate) < new Date();
 
   return (
-    <div>
-      <div className="mb-8 flex justify-between items-center">
+    <div className="max-w-3xl mx-auto px-1 sm:px-4 py-3 sm:py-6">
+      <div className="mb-4 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <button
+            className="mb-2 sm:mb-0 inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+            onClick={() => navigate("/subscriptions")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {t("Back to Subscriptions")}
+          </button>
+          
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-2">
             {subscription.name}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             {t(`subscriptionTypes.${subscription.type}`)} • {t("Provided by")} {subscription.provider}
           </p>
         </div>
-        <div className="flex space-x-4">
-          <Button 
-            variant="secondary" 
+        <div className="flex mt-3 sm:mt-0 space-x-3">
+          <button 
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 rounded-md"
             onClick={() => navigate(`/subscriptions/${id}/edit`)}
           >
             {t("common.edit")}
-          </Button>
-          <Button 
-            variant="tertiary" 
-            onClick={() => navigate("/subscriptions")}
-          >
-            {t("common.back")}
-          </Button>
+          </button>
         </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
         {/* Subscription status banner */}
-        <div className={`p-4 ${isExpired ? 'bg-red-500' : 'bg-green-500'} text-white`}>
+        <div className={`p-2 sm:p-4 ${isExpired ? 'bg-red-500' : 'bg-green-500'} text-white`}>
           <p className="font-medium">
             {isExpired ? t("Expired Subscription") : t("Active Subscription")}
           </p>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-3 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
                 {t("Subscription Details")}

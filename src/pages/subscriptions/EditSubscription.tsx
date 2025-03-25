@@ -139,19 +139,31 @@ export function EditSubscription() {
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t("Edit Subscription")}
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t("Update the details for")} {subscription?.name}
-        </p>
+    <div className="max-w-3xl mx-auto px-1 sm:px-4 py-3 sm:py-6">
+      <div className="mb-3 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div>
+          <button
+            className="mb-2 sm:mb-0 inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+            onClick={() => navigate("/subscriptions")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {t("Back to Subscriptions")}
+          </button>
+          
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-2">
+            {t("Edit Subscription")}
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+            {t("Update the details for")} {subscription?.name}
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900 p-4 rounded-md">
-          <p className="text-red-800 dark:text-red-200">{error}</p>
+        <div className="mb-3 sm:mb-6 bg-red-50 dark:bg-red-900 p-2 sm:p-4 rounded-md">
+          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
         </div>
       )}
 
