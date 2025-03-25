@@ -33,7 +33,15 @@
     "subscriptionsExpiringSoon": "ये सब्सक्रिप्शन जल्द ही समाप्त हो जाएंगे। सेवा में कोई रुकावट न आए, इसके लिए कार्रवाई करें।",
     "expiringToday": "आज समाप्त हो रहा है!",
     "expiringTomorrow": "कल समाप्त हो रहा है",
-    "daysRemaining": "{{days}} दिन शेष"
+    "daysRemaining": "{{days}} दिन शेष",
+    "recentlyAdded": "हाल ही में जोड़े गए सब्सक्रिप्शन",
+    "recentlyAddedDescription": "आपके 5 सबसे हाल ही में जोड़े गए सब्सक्रिप्शन",
+    "addedOn": "जोड़ा गया: ",
+    "viewAllSubscriptions": "सभी सब्सक्रिप्शन देखें",
+    "noSubscriptionsYet": "अभी तक कोई सब्सक्रिप्शन नहीं",
+    "addFirstSubscription": "अपना पहला सब्सक्रिप्शन जोड़कर प्रारंभ करें",
+    "active": "सक्रिय",
+    "expired": "समाप्त"
   },
   "subscription": {
     "add": "सब्सक्रिप्शन जोड़ें",

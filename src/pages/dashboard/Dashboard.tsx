@@ -89,6 +89,16 @@ export function Dashboard() {
     0
   );
 
+  // Filter to get the 5 most recently added subscriptions
+  const recentSubscriptions = [...subscriptions]
+    .sort((a, b) => {
+      // If createdAt is available, use it; otherwise, fall back to sensible defaults
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA; // Sort in descending order (newest first)
+    })
+    .slice(0, 5); // Get only the first 5
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-64">
@@ -307,6 +317,108 @@ export function Dashboard() {
                   );
                 })}
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Recently Added Subscriptions */}
+      {recentSubscriptions.length > 0 && (
+        <div className="mt-8 mb-6">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+                {t("dashboard.recentlyAdded")}
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                {t("dashboard.recentlyAddedDescription")}
+              </p>
+            </div>
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+              {recentSubscriptions.map((subscription) => {
+                const isExpired = new Date(subscription.endDate) < currentDate;
+                const createdDate = subscription.createdAt ? new Date(subscription.createdAt) : null;
+                
+                return (
+                  <li key={subscription.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <h4 className="text-md font-medium text-gray-900 dark:text-white">
+                          {subscription.name}
+                        </h4>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {t(`subscriptionTypes.${subscription.type}`)} • {subscription.provider}
+                          </span>
+                        </div>
+                        {createdDate && (
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {t("dashboard.addedOn")} {new Intl.DateTimeFormat('default', { dateStyle: 'medium' }).format(createdDate)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <div className="mr-4 text-right">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {new Intl.NumberFormat('default', {
+                              style: 'currency',
+                              currency: subscription.currency || 'INR',
+                            }).format(subscription.amount || 0)}
+                          </div>
+                          <div className={`text-sm ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {isExpired ? t("dashboard.expired") : t("dashboard.active")}
+                          </div>
+                        </div>
+                        <Link
+                          to={`/subscriptions/${subscription.id}`}
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-100 dark:bg-indigo-900 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          {t("common.view")}
+                        </Link>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="px-4 py-3 sm:px-6 border-t border-gray-200 dark:border-gray-700 text-center">
+              <Link
+                to="/subscriptions"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                {t("dashboard.viewAllSubscriptions")}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Subscriptions Yet Message - only show if there are no subscriptions at all */}
+      {subscriptions.length === 0 && (
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-6 text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+              {t("dashboard.noSubscriptionsYet")}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t("dashboard.addFirstSubscription")}
+            </p>
+            <div className="mt-6">
+              <Link
+                to="/subscriptions/add"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                {t("subscription.add")}
+              </Link>
+            </div>
           </div>
         </div>
       )}

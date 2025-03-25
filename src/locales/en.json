@@ -33,7 +33,15 @@
     "subscriptionsExpiringSoon": "These subscriptions will expire soon. Take action to avoid service interruption.",
     "expiringToday": "Expires today!",
     "expiringTomorrow": "Expires tomorrow",
-    "daysRemaining": "{{days}} days remaining"
+    "daysRemaining": "{{days}} days remaining",
+    "recentlyAdded": "Recently Added Subscriptions",
+    "recentlyAddedDescription": "Your 5 most recently added subscriptions",
+    "addedOn": "Added: ",
+    "viewAllSubscriptions": "View all subscriptions",
+    "noSubscriptionsYet": "No subscriptions yet",
+    "addFirstSubscription": "Get started by adding your first subscription",
+    "active": "Active",
+    "expired": "Expired"
   },
   "subscription": {
     "add": "Add Subscription",
