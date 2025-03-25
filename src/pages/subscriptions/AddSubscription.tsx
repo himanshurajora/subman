@@ -19,13 +19,20 @@ export function AddSubscription() {
   useEffect(() => {
     if (location.state?.prefillData) {
       const qrData = location.state.prefillData as QRCodeData;
-      console.log("Received QR data:", qrData);
+      console.log("Received QR data:", JSON.stringify(qrData, null, 2));
       
-      // Pre-fill form with QR data
-      setInitialData({
-        ...qrData.data,
-        type: qrData.type
-      });
+      if (qrData.type && qrData.data) {
+        // Pre-fill form with QR data - merge type and data fields
+        const formData: Partial<SubscriptionFormFields> = {
+          ...qrData.data,
+          type: qrData.type
+        };
+        
+        console.log("Setting form data:", JSON.stringify(formData, null, 2));
+        setInitialData(formData);
+      } else {
+        console.error("Invalid QR data format. Expected {type, data} but got:", qrData);
+      }
     }
   }, [location.state]);
 

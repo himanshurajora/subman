@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeData, SubscriptionFormFields } from '../../types';
 import { QRScanner } from '../QRScanner/QRScanner';
@@ -50,13 +50,37 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
   
   // Initialize form data once with the merged defaults and initialData
   const [formData, setFormData] = useState<SubscriptionFormFields>(() => {
-    // Always use INR as currency regardless of initialData
-    return {
+    // Log the initialData to help debug
+    console.log("SubscriptionForm initialData:", JSON.stringify(initialData, null, 2));
+    
+    // Create merged form data with proper defaults
+    const mergedData = {
       ...DEFAULT_FORM_DATA,
       ...initialData,
       currency: 'INR' // Force currency to be INR
     };
+    
+    console.log("SubscriptionForm merged formData:", JSON.stringify(mergedData, null, 2));
+    return mergedData;
   });
+
+  // Add useEffect to handle initialData changes after component mount
+  useEffect(() => {
+    if (Object.keys(initialData).length > 0) {
+      console.log("SubscriptionForm initialData changed:", JSON.stringify(initialData, null, 2));
+      
+      setFormData(currentData => {
+        const updatedData = {
+          ...currentData,
+          ...initialData,
+          currency: 'INR' // Always ensure currency is INR
+        };
+        
+        console.log("SubscriptionForm updated formData:", JSON.stringify(updatedData, null, 2));
+        return updatedData;
+      });
+    }
+  }, [initialData]);
 
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

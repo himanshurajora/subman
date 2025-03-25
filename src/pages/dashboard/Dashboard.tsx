@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { db, collection, query, where, getDocs } from "../../firebase";
-import { Subscription } from "../../types";
-import { Link } from "react-router-dom";
+import { Subscription, QRCodeData } from "../../types";
+import { Link, useNavigate } from "react-router-dom";
+import { QRScanner } from "../../components/QRScanner/QRScanner";
 
 export function Dashboard() {
   const { t } = useTranslation();
@@ -11,6 +12,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [error, setError] = useState("");
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Create an AbortController to cancel the fetch if component unmounts
@@ -99,6 +102,22 @@ export function Dashboard() {
     })
     .slice(0, 5); // Get only the first 5
 
+  // Handle QR scan data
+  const handleQRScan = (data: QRCodeData) => {
+    console.log("QR code scanned:", JSON.stringify(data, null, 2));
+    setShowQRScanner(false);
+    
+    // Validate the data structure before navigating
+    if (!data || !data.type || !data.data) {
+      console.error("Invalid QR data format:", data);
+      alert("The scanned QR code doesn't contain valid subscription information. Please try again.");
+      return;
+    }
+    
+    // Navigate to add subscription with pre-filled data
+    navigate("/subscriptions/add", { state: { prefillData: data } });
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-64">
@@ -140,13 +159,33 @@ export function Dashboard() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t("navigation.dashboard")}
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t("app.tagline")}
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t("navigation.dashboard")}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {t("app.tagline")}
+          </p>
+        </div>
+        
+        {/* Scan QR / Upload PDF button - visible on desktop only */}
+        <button
+          onClick={() => setShowQRScanner(true)}
+          className="hidden sm:flex items-center justify-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-colors"
+          aria-label={t("subscription.scanQROrPDF")}
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5 mr-2" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+          </svg>
+          {t("subscription.scanQROrPDF")}
+        </button>
       </div>
 
       {error && (
@@ -434,6 +473,35 @@ export function Dashboard() {
           {t("subscription.add")}
         </Link>
       </div>
+
+      {/* QR Scanner Modal */}
+      {showQRScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <QRScanner
+              onScan={handleQRScan}
+              onClose={() => setShowQRScanner(false)}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Mobile floating action button - visible on mobile only */}
+      <button
+        onClick={() => setShowQRScanner(true)}
+        className="sm:hidden fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+        aria-label={t("subscription.scanQROrPDF")}
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="h-6 w-6" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
+      </button>
     </div>
   );
 } 
