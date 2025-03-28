@@ -408,7 +408,8 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
       'type', 'name', 'provider', 'startDate', 'endDate', 'reminderDays', 'amount', 'currency', 
       'notes', 'reminder', 'vehicleNumber', 'vehicleType', 'registrationType', 'owner',
       'membershipId', 'level', 'accountNumber', 'utilityType', 'serviceAddress',
-      'policyNumber', 'coverageType', 'coverage', 'ownerName', 'address', 'contactNumber', 'email'
+      'policyNumber', 'coverageType', 'coverage', 'ownerName', 'address', 'contactNumber', 'email',
+      'fileUrl', 'fileMetadata', 'attachments', 'uniqId'
     ];
     
     // Find all non-standard fields in formData
@@ -417,7 +418,8 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
         !standardFields.includes(key) && 
         formData[key] !== undefined && 
         formData[key] !== null && 
-        formData[key] !== ''
+        formData[key] !== '' &&
+        typeof formData[key] !== 'object' // Exclude objects like fileMetadata
       );
     
     if (dynamicFields.length === 0) {
@@ -654,6 +656,24 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
         </div>
 
         <div>
+          <label htmlFor="uniqId" className={labelClasses}>
+            {t('Unique ID')}
+          </label>
+          <input
+            type="text"
+            id="uniqId"
+            name="uniqId"
+            value={formData.uniqId || ''}
+            onChange={handleChange}
+            className={inputClasses}
+            placeholder={t('Policy/Document Unique Identifier')}
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {t('Unique identifier for this document (e.g., policy number)')}
+          </p>
+        </div>
+
+        <div>
           <label htmlFor="type" className={`${labelClasses} ${requiredFieldMark}`}>
             {t('common.type')}
           </label>
@@ -802,6 +822,39 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
                 <span>{t('View/Download')}</span>
               </a>
             </div>
+            {formData.fileMetadata && (
+              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('File Information')}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {t('Original Filename')}
+                    </p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">
+                      {formData.fileMetadata.originalName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {t('Uploaded By')}
+                    </p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">
+                      {formData.fileMetadata.uploadedBy}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {t('Upload Date')}
+                    </p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">
+                      {new Date(formData.fileMetadata.uploadedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {t('Original document uploaded during subscription creation')}
             </p>

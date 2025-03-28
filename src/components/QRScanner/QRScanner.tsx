@@ -324,6 +324,8 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         3. If you find a field that doesn't fit the standard schema, create a meaningful name that clearly describes what the field represents
         4. Use camelCase for field names and ensure they are self-documenting
         5. If you're unsure about a field's purpose, use context clues from surrounding data to determine an appropriate name
+        6. ALWAYS identify and extract a unique identifier for the document as "uniqId" - this could be a policy number, document ID, registration number, etc.
+        7. Generate a concise summary of the document in the "notes" field
 
         Extract these common fields if present:
         - Type of subscription (vehicle, membership, utility, insurance, or other)
@@ -333,7 +335,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         - End date or expiry date (in YYYY-MM-DD format)
         - Amount or cost (numeric value)
         - Currency
-        - Any unique identifier (vehicle number, membership ID, account number, policy number)
+        - Any unique identifier (vehicle number, membership ID, account number, policy number) - MUST BE EXTRACTED as "uniqId"
 
         Personal/contact details to extract if available:
         - Owner name or customer name
@@ -342,10 +344,10 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         - Email ID
 
         Additional field guidelines:
-        - For vehicle subscriptions: Include fields like vehicleModel, manufacturingYear, fuelType, registrationAuthority
-        - For memberships: Include fields like membershipTier, benefitsList, accessLevel, facilityAccess
-        - For utilities: Include fields like meterNumber, serviceType, billingCycle, consumptionUnit
-        - For insurance: Include fields like coverageType, sumInsured, policyTerms, claimLimit
+        - For vehicle subscriptions: Include fields like vehicleModel, manufacturingYear, fuelType, registrationAuthority, chassisNumber, engineNumber, registrationType
+        - For memberships: Include fields like membershipTier, benefitsList, accessLevel, facilityAccess, memberSince, membershipCategory
+        - For utilities: Include fields like meterNumber, serviceType, billingCycle, consumptionUnit, connectionType, meterReading, nextBillingDate
+        - For insurance: Include fields like coverageType, sumInsured, policyTerms, claimLimit, insuredName, beneficiaryName, premiumAmount, coveragePeriod, policyType
 
         Return the information in a structured JSON format with the following schema:
         {
@@ -359,6 +361,10 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             "amount": number,
             "currency": "Currency code like INR, USD",
             
+            // IMPORTANT - Always include these fields
+            "uniqId": "The unique identifier for this document (policy/account/membership number)",
+            "notes": "A concise summary describing the document and key details",
+            
             // Personal/contact details
             "ownerName": "Name of the owner/customer",
             "address": "Billing or service address",
@@ -371,7 +377,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             "accountNumber": "For utility subscriptions",
             "policyNumber": "For insurance subscriptions",
             
-            // Any additional fields should use descriptive names like:
+            // Any additional fields with descriptive names
             "vehicleModel": "Model of the vehicle",
             "fuelType": "Type of fuel used",
             "membershipTier": "Level of membership",

@@ -16,6 +16,7 @@ export interface Subscription {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  uniqId?: string;
   
   // File related fields
   fileUrl?: string;
@@ -100,6 +101,7 @@ export interface SubscriptionFormFields extends Omit<Partial<Subscription>, 'id'
   provider: string;
   notes?: string;
   type: SubscriptionType;
+  uniqId?: string;
 }
 
 export interface QRCodeData {
