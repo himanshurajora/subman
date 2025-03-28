@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
-import { QRCodeData } from '../../types';
-import { getVertexAI, getGenerativeModel } from 'firebase/vertexai';
 import { getApp } from 'firebase/app';
+import { getDownloadURL, getStorage, ref, uploadBytesResumable } from "firebase/storage";
+import { getGenerativeModel, getVertexAI } from 'firebase/vertexai';
 import * as pdfjsLib from 'pdfjs-dist';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from "../../contexts/AuthContext";
+import { QRCodeData } from '../../types';
 // Configure PDF.js to use a CDN worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
@@ -42,6 +44,7 @@ interface QRScannerProps {
 
 export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const { t } = useTranslation();
+  const { currentUser } = useAuth();
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -55,6 +58,8 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [isProcessingAI, setIsProcessingAI] = useState<boolean>(false);
   const [isPdfMode, setIsPdfMode] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // Initialize code reader with proper hints using the proper Map format
   const hints = new Map();
@@ -194,34 +199,98 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     
     try {
       setIsProcessingAI(true);
+      setIsUploading(true);
       setRawQRContent(`Extracting text from: ${file.name}...`);
       
-      // Extract text from PDF
-      console.log(`Processing PDF file: ${file.name} (${Math.round(file.size / 1024)} KB)`);
-      const extractedText = await extractTextFromPDF(file);
-      console.log(`Successfully extracted ${extractedText.length} characters of text from PDF`);
+      // Upload file to Firebase Storage with metadata
+      const storage = getStorage();
+      const timestamp = Date.now();
+      const storageRef = ref(storage, `subscriptions/${timestamp}_${file.name}`);
       
-      // Show preview with word count
-      const wordCount = extractedText.split(/\s+/).length;
-      if (extractedText.length > 200) {
-        // Log a preview of the extracted text (first 200 chars)
-        console.log(`Text preview (${wordCount} words): ${extractedText.substring(0, 200)}...`);
-      } else {
-        console.log(`Extracted text (${wordCount} words): ${extractedText}`);
-      }
+      // Create custom metadata
+      const customMetadata = {
+        uploadedBy: currentUser?.displayName || 'Unknown User',
+        userEmail: currentUser?.email || 'No Email',
+        userId: currentUser?.uid || 'No ID',
+        uploadedAt: new Date().toISOString(),
+        originalName: file.name
+      };
+
+      // Create file metadata including custom metadata
+      const metadata = {
+        contentType: 'application/pdf',
+        customMetadata
+      };
+
+      const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+      // Monitor upload progress
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+          console.log('Upload is ' + progress + '% done');
+        },
+        (error) => {
+          console.error('Upload error:', error);
+          setError(`Failed to upload file: ${error.message}`);
+          setIsUploading(false);
+        },
+        async () => {
+          // Upload completed successfully
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          console.log('File available at', downloadURL);
+          setIsUploading(false);
+          
+          // Continue with text extraction and processing
+          try {
+            // Extract text from PDF
+            console.log(`Processing PDF file: ${file.name} (${Math.round(file.size / 1024)} KB)`);
+            const extractedText = await extractTextFromPDF(file);
+            console.log(`Successfully extracted ${extractedText.length} characters of text from PDF`);
+            
+            // Show preview with word count
+            const wordCount = extractedText.split(/\s+/).length;
+            if (extractedText.length > 200) {
+              console.log(`Text preview (${wordCount} words): ${extractedText.substring(0, 200)}...`);
+            } else {
+              console.log(`Extracted text (${wordCount} words): ${extractedText}`);
+            }
+            
+            // Update display with word count
+            setRawQRContent(`${extractedText}\n\n(Limited to ${wordCount} words for processing)`);
+            
+            // Process with AI
+            const result = await processWithAI(extractedText);
+            if (result) {
+              // Add the download URL and metadata to the result
+              const enhancedResult = {
+                ...result,
+                data: {
+                  ...result.data,
+                  fileUrl: downloadURL,
+                  fileMetadata: {
+                    uploadedBy: customMetadata.uploadedBy,
+                    userEmail: customMetadata.userEmail,
+                    userId: customMetadata.userId,
+                    uploadedAt: customMetadata.uploadedAt,
+                    originalName: customMetadata.originalName
+                  }
+                }
+              };
+              console.log('Successfully processed PDF with AI:', enhancedResult);
+              onScan(enhancedResult);
+            } else {
+              console.error('AI processing failed to extract subscription information');
+              setInvalidQRError('Could not extract subscription information from the PDF.');
+            }
+          } catch (error) {
+            console.error('PDF processing error:', error);
+            setInvalidQRError(`Failed to process the PDF file: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again with a different file.`);
+          }
+        }
+      );
       
-      // Update display with word count
-      setRawQRContent(`${extractedText}\n\n(Limited to ${wordCount} words for processing)`);
-      
-      // Process with AI
-      const result = await processWithAI(extractedText);
-      if (result) {
-        console.log('Successfully processed PDF with AI:', result);
-        onScan(result);
-      } else {
-        console.error('AI processing failed to extract subscription information');
-        setInvalidQRError('Could not extract subscription information from the PDF.');
-      }
     } catch (error) {
       console.error('PDF processing error:', error);
       setInvalidQRError(`Failed to process the PDF file: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again with a different file.`);
@@ -717,6 +786,22 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     }, 500);
   };
 
+  // Add upload progress UI component
+  const UploadProgress = () => (
+    <div className="mb-4">
+      <div className="flex justify-between mb-1">
+        <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Uploading file...</span>
+        <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{Math.round(uploadProgress)}%</span>
+      </div>
+      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+        <div 
+          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+          style={{ width: `${uploadProgress}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+
   if (invalidQRError) {
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-75 flex items-center justify-center p-4">
@@ -840,6 +925,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           {isPdfMode ? (
             // PDF Mode
             <div>
+              {isUploading && <UploadProgress />}
               <div className="mb-4 flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

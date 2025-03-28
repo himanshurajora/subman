@@ -17,6 +17,10 @@ export interface Subscription {
   createdAt: string;
   updatedAt: string;
   
+  // File related fields
+  fileUrl?: string;
+  fileMetadata?: FileMetadata;
+  
   // Contact information fields
   ownerName?: string;
   address?: string;
@@ -85,7 +89,7 @@ export interface User {
   createdAt: string;
 }
 
-export interface SubscriptionFormFields {
+export interface SubscriptionFormFields extends Omit<Partial<Subscription>, 'id' | 'userId' | 'createdAt' | 'updatedAt'> {
   name: string;
   startDate: string;
   endDate: string;
@@ -96,31 +100,17 @@ export interface SubscriptionFormFields {
   provider: string;
   notes?: string;
   type: SubscriptionType;
-  
-  // Contact information fields
-  ownerName?: string;
-  address?: string;
-  contactNumber?: string;
-  email?: string;
-  
-  // Type-specific fields may be added dynamically
-  vehicleNumber?: string;
-  vehicleType?: string;
-  registrationType?: string;
-  owner?: string;
-  membershipId?: string;
-  level?: string;
-  accountNumber?: string;
-  utilityType?: string;
-  serviceAddress?: string;
-  policyNumber?: string;
-  coverageType?: string;
-  coverage?: number;
-  
-  [key: string]: any; // For any other dynamic fields
 }
 
 export interface QRCodeData {
   type: SubscriptionType;
   data: Record<string, any>;
+}
+
+export interface FileMetadata {
+  uploadedBy: string;
+  userEmail: string;
+  userId: string;
+  uploadedAt: string;
+  originalName: string;
 } 

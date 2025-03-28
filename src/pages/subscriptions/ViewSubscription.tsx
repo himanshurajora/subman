@@ -435,6 +435,38 @@ export function ViewSubscription() {
             </div>
           )}
           
+          {/* Document Section */}
+          {subscription.fileUrl && (
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
+                {t("Document")}
+              </h3>
+              
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex-grow">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    {t("Attached File")}
+                  </p>
+                  <p className="text-sm text-gray-900 dark:text-white break-all font-mono">
+                    {subscription.fileUrl}
+                  </p>
+                </div>
+                
+                <a
+                  href={subscription.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  {t("View/Download")}
+                </a>
+              </div>
+            </div>
+          )}
+          
           {/* Additional Details (Dynamic Fields) */}
           {(() => {
             // List of all standard field names

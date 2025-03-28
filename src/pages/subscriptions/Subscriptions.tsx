@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { collection, db, getDocs, query, where } from "../../firebase";
 import { Subscription } from "../../types";
@@ -8,12 +8,15 @@ import { Subscription } from "../../types";
 export function Subscriptions() {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "expired">("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<'createdAt' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -72,6 +75,27 @@ export function Subscriptions() {
     };
   }, [currentUser]);
 
+  // Format date function
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('default', { 
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(date);
+  };
+
+  // Handle sort click
+  const handleSortClick = (field: 'createdAt') => {
+    if (sortField === field) {
+      // If already sorting by this field, toggle direction
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If sorting by a new field, set it with default desc direction
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
   // Filter and search subscriptions
   const filteredSubscriptions = subscriptions
     .filter(sub => {
@@ -91,6 +115,14 @@ export function Subscriptions() {
         sub.provider.toLowerCase().includes(term) ||
         sub.type.toLowerCase().includes(term)
       );
+    })
+    .sort((a, b) => {
+      if (sortField === 'createdAt') {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      return 0;
     });
 
   // Calculate pagination
@@ -102,6 +134,14 @@ export function Subscriptions() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filter]);
+
+  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, subscriptionId: string) => {
+    // Check if the click was on or inside an action button
+    const isActionButton = (e.target as HTMLElement).closest('.action-button');
+    if (!isActionButton) {
+      navigate(`/subscriptions/${subscriptionId}`);
+    }
+  };
 
   // Pagination component
   const Pagination = () => {
@@ -198,12 +238,6 @@ export function Subscriptions() {
         </div>
       </div>
     );
-  };
-
-  // Format date function
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('default', { dateStyle: 'medium' }).format(date);
   };
 
   if (loading) {
@@ -366,8 +400,24 @@ export function Subscriptions() {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       {t("Status")}
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t("Created At")}
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:text-indigo-500 dark:hover:text-indigo-400"
+                      onClick={() => handleSortClick('createdAt')}
+                    >
+                      <div className="flex items-center">
+                        {t("Created At")}
+                        {sortField === 'createdAt' && (
+                          <svg 
+                            className={`ml-1 h-4 w-4 transition-transform ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        )}
+                      </div>
                     </th>
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       {t("Actions")}
@@ -378,7 +428,11 @@ export function Subscriptions() {
                   {paginatedSubscriptions.map((subscription) => {
                     const isExpired = new Date(subscription.endDate) < new Date();
                     return (
-                      <tr key={subscription.id}>
+                      <tr 
+                        key={subscription.id}
+                        onClick={(e) => handleRowClick(e, subscription.id)}
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {subscription.name}
@@ -418,13 +472,13 @@ export function Subscriptions() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <Link 
                             to={`/subscriptions/${subscription.id}`} 
-                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4"
+                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4 action-button"
                           >
                             {t("common.view")}
                           </Link>
                           <Link 
                             to={`/subscriptions/${subscription.id}/edit`} 
-                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 action-button"
                           >
                             {t("common.edit")}
                           </Link>

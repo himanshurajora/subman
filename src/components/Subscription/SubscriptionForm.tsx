@@ -776,6 +776,39 @@ export function SubscriptionForm({ initialData = {}, onSubmit, onCancel, isLoadi
         />
       </div>
 
+      {/* File URL section if available */}
+      {formData.fileUrl && (
+        <div className={`${sectionClasses} sm:col-span-2`}>
+          <div className="flex flex-col space-y-2">
+            <label className={labelClasses}>
+              {t('Attached Document')}
+            </label>
+            <div className="flex items-center space-x-4">
+              <input
+                type="text"
+                value={formData.fileUrl}
+                readOnly
+                className={`${inputClasses} bg-gray-50 dark:bg-gray-700 flex-grow`}
+              />
+              <a
+                href={formData.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center space-x-2 whitespace-nowrap"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span>{t('View/Download')}</span>
+              </a>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {t('Original document uploaded during subscription creation')}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Contact Information Fields */}
       {renderContactInfoFields()}
 
