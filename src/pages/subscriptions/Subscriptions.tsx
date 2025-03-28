@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { collection, db, getDocs, query, where } from "../../firebase";
+import { collection, db, getDocs, query, where, orderBy } from "../../firebase";
 import { Subscription } from "../../types";
 
 export function Subscriptions() {
@@ -15,7 +15,7 @@ export function Subscriptions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "expired">("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<'createdAt' | null>(null);
+  const [sortField, setSortField] = useState<'createdAt' | null>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
 
@@ -40,7 +40,8 @@ export function Subscriptions() {
         
         const q = query(
           collection(db, "subscriptions"),
-          where("userId", "==", currentUser.uid)
+          where("userId", "==", currentUser.uid),
+          orderBy("createdAt", "desc")
         );
         
         const querySnapshot = await getDocs(q);

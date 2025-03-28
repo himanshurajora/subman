@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
-import { db, collection, query, where, getDocs } from "../../firebase";
+import { db, collection, query, where, getDocs, orderBy } from "../../firebase";
 import { Subscription, QRCodeData } from "../../types";
 import { Link, useNavigate } from "react-router-dom";
 import { QRScanner } from "../../components/QRScanner/QRScanner";
@@ -36,7 +36,8 @@ export function Dashboard() {
         
         const q = query(
           collection(db, "subscriptions"),
-          where("userId", "==", currentUser.uid)
+          where("userId", "==", currentUser.uid),
+          orderBy("createdAt", "desc")
         );
         
         const querySnapshot = await getDocs(q);
