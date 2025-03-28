@@ -794,16 +794,67 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
 
   // Add upload progress UI component
   const UploadProgress = () => (
-    <div className="mb-4">
-      <div className="flex justify-between mb-1">
-        <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Uploading file...</span>
-        <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{Math.round(uploadProgress)}%</span>
-      </div>
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-        <div 
-          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
-          style={{ width: `${uploadProgress}%` }}
-        ></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
+      <div className="w-full max-w-md px-6 py-8 bg-gray-900 bg-opacity-90 rounded-xl border border-indigo-500">
+        <div className="flex justify-center mb-6">
+          <div className="relative w-24 h-24">
+            {/* Outer rotating ring */}
+            <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-l-transparent animate-spin"></div>
+            
+            {/* Progress circle */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+              <circle 
+                className="text-gray-700" 
+                strokeWidth="8" 
+                stroke="currentColor" 
+                fill="transparent" 
+                r="42" 
+                cx="50" 
+                cy="50" 
+              />
+              <circle 
+                className="text-indigo-500 transition-all duration-300" 
+                strokeWidth="8" 
+                strokeDasharray={264}
+                strokeDashoffset={264 - (264 * uploadProgress) / 100} 
+                strokeLinecap="round" 
+                stroke="currentColor" 
+                fill="transparent" 
+                r="42" 
+                cx="50" 
+                cy="50" 
+              />
+            </svg>
+            
+            {/* Center percentage */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xl font-semibold text-white">{Math.round(uploadProgress)}%</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 className="text-xl font-semibold text-indigo-300 text-center mb-4">Uploading Document</h3>
+        <p className="text-white text-sm text-center mb-2">
+          Please wait while your document is being uploaded...
+        </p>
+        
+        {/* Animated file upload icon */}
+        <div className="flex justify-center mt-4">
+          <div className="relative w-16 h-16">
+            <svg className="w-full h-full text-indigo-400 animate-pulse" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 18V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 15L12 18L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <div className="absolute bottom-0 w-full">
+              <div 
+                className="h-1 bg-indigo-500 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -931,32 +982,37 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           {isPdfMode ? (
             // PDF Mode
             <div>
-              {isUploading && <UploadProgress />}
-              <div className="mb-4 flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <button
-                  type="button"
-                  onClick={handleUploadClick}
-                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  {t('Select PDF File')}
-                </button>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  ref={fileInputRef}
-                  onChange={handlePdfSelection}
-                  accept="application/pdf"
-                />
-              </div>
-              
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
-                {t('The system will extract text from the PDF and analyze it to find subscription information.')}
-                <br className="hidden sm:block" />
-                {t('For best results, use PDFs with selectable text (not scanned images).')}
-              </p>
+              {isUploading ? (
+                <UploadProgress />
+              ) : (
+                <>
+                  <div className="mb-4 flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <button
+                      type="button"
+                      onClick={handleUploadClick}
+                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      {t('Select PDF File')}
+                    </button>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      ref={fileInputRef}
+                      onChange={handlePdfSelection}
+                      accept="application/pdf"
+                    />
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+                    {t('The system will extract text from the PDF and analyze it to find subscription information.')}
+                    <br className="hidden sm:block" />
+                    {t('For best results, use PDFs with selectable text (not scanned images).')}
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             // QR Scanner Mode
