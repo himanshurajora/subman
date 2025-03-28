@@ -247,10 +247,16 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       
       // Create a well-crafted prompt for the model
       const prompt = `
-        Analyze the following text extracted from a QR code or PDF and extract relevant subscription information.
-        The text may contain information about a subscription, registration, membership, utility bill, or insurance policy.
+        You are a precise subscription information extractor. Your task is to analyze the following text from a QR code or PDF and extract subscription-related information with meaningful, human-readable field names.
 
-        I need to extract these common fields (if present):
+        IMPORTANT GUIDELINES:
+        1. NEVER use generic field names like "additionalField1" or "additionalField2"
+        2. Always use descriptive, human-readable field names that accurately represent the data
+        3. If you find a field that doesn't fit the standard schema, create a meaningful name that clearly describes what the field represents
+        4. Use camelCase for field names and ensure they are self-documenting
+        5. If you're unsure about a field's purpose, use context clues from surrounding data to determine an appropriate name
+
+        Extract these common fields if present:
         - Type of subscription (vehicle, membership, utility, insurance, or other)
         - Name/title of the subscription
         - Provider or issuing organization
@@ -260,18 +266,23 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         - Currency
         - Any unique identifier (vehicle number, membership ID, account number, policy number)
 
-        IMPORTANT: Also extract these personal/contact details if available:
+        Personal/contact details to extract if available:
         - Owner name or customer name
         - Address (billing or service address)
         - Contact number or phone
         - Email ID
 
-        I also want to extract ANY other potentially useful fields present in the data that could be relevant for a subscription management system.
+        Additional field guidelines:
+        - For vehicle subscriptions: Include fields like vehicleModel, manufacturingYear, fuelType, registrationAuthority
+        - For memberships: Include fields like membershipTier, benefitsList, accessLevel, facilityAccess
+        - For utilities: Include fields like meterNumber, serviceType, billingCycle, consumptionUnit
+        - For insurance: Include fields like coverageType, sumInsured, policyTerms, claimLimit
 
         Return the information in a structured JSON format with the following schema:
         {
           "type": "vehicle|membership|utility|insurance|other",
           "data": {
+            // Standard fields
             "name": "The name or title",
             "provider": "Provider name",
             "startDate": "YYYY-MM-DD",
@@ -279,23 +290,28 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             "amount": number,
             "currency": "Currency code like INR, USD",
             
-            // Personal/contact details if available
+            // Personal/contact details
             "ownerName": "Name of the owner/customer",
             "address": "Billing or service address",
             "contactNumber": "Phone number with or without country code",
             "email": "Email address of the owner/customer",
             
-            // Include any of these identifiers if present
+            // Type-specific identifiers (include only relevant ones)
             "vehicleNumber": "For vehicle subscriptions",
             "membershipId": "For membership subscriptions",
             "accountNumber": "For utility subscriptions",
             "policyNumber": "For insurance subscriptions",
             
-            // Include any other fields found in the text
-            "additionalField1": "value1",
-            "additionalField2": "value2"
+            // Any additional fields should use descriptive names like:
+            "vehicleModel": "Model of the vehicle",
+            "fuelType": "Type of fuel used",
+            "membershipTier": "Level of membership",
+            "coverageType": "Type of insurance coverage",
+            "meterNumber": "Utility meter identification",
+            "billingCycle": "Monthly/Quarterly/Annual"
           }
         }
+
         If there's not enough information to determine this is a subscription, respond with: {"insufficient": true}
 
         Text to analyze:
