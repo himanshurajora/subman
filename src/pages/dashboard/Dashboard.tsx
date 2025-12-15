@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { db, collection, query, where, getDocs, orderBy } from "../../firebase";
-import { Subscription, QRCodeData } from "../../types";
+import { Subscription, QRCodeData, SubscriptionType } from "../../types";
 import { Link, useNavigate } from "react-router-dom";
 import { QRScanner } from "../../components/QRScanner/QRScanner";
+
+// Sort field types for dashboard tables
+type ExpiringSortField = 'name' | 'endDate' | 'amount' | 'type';
+type RecentSortField = 'name' | 'createdAt' | 'amount' | 'type';
 
 export function Dashboard() {
   const { t } = useTranslation();
@@ -14,6 +18,17 @@ export function Dashboard() {
   const [error, setError] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
   const navigate = useNavigate();
+
+  // Expiring subscriptions filters and sorting
+  const [expiringTypeFilter, setExpiringTypeFilter] = useState<SubscriptionType | "all">("all");
+  const [expiringDaysFilter, setExpiringDaysFilter] = useState<number>(30);
+  const [expiringSortField, setExpiringSortField] = useState<ExpiringSortField>('endDate');
+  const [expiringSortDirection, setExpiringSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Recent subscriptions filters and sorting
+  const [recentTypeFilter, setRecentTypeFilter] = useState<SubscriptionType | "all">("all");
+  const [recentSortField, setRecentSortField] = useState<RecentSortField>('createdAt');
+  const [recentSortDirection, setRecentSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     // Create an AbortController to cancel the fetch if component unmounts
@@ -78,30 +93,78 @@ export function Dashboard() {
     (sub) => new Date(sub.endDate) >= currentDate
   );
   
-  const expiringSubscriptions = activeSubscriptions.filter(
-    (sub) => {
-      const endDate = new Date(sub.endDate);
-      const daysRemaining = Math.ceil(
-        (endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return daysRemaining <= 30; // Expiring in the next 30 days
-    }
-  );
+  // Filtered and sorted expiring subscriptions
+  const expiringSubscriptions = useMemo(() => {
+    return activeSubscriptions
+      .filter((sub) => {
+        const endDate = new Date(sub.endDate);
+        const daysRemaining = Math.ceil(
+          (endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        // Filter by days
+        if (daysRemaining > expiringDaysFilter) return false;
+        // Filter by type
+        if (expiringTypeFilter !== "all" && sub.type !== expiringTypeFilter) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        let comparison = 0;
+        switch (expiringSortField) {
+          case 'name':
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case 'amount':
+            comparison = a.amount - b.amount;
+            break;
+          case 'type':
+            comparison = a.type.localeCompare(b.type);
+            break;
+          case 'endDate':
+          default:
+            comparison = new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+            break;
+        }
+        return expiringSortDirection === 'asc' ? comparison : -comparison;
+      });
+  }, [activeSubscriptions, expiringDaysFilter, expiringTypeFilter, expiringSortField, expiringSortDirection, currentDate]);
   
   const totalSpending = activeSubscriptions.reduce(
     (total, sub) => total + sub.amount,
     0
   );
 
-  // Filter to get the 5 most recently added subscriptions
-  const recentSubscriptions = [...subscriptions]
-    .sort((a, b) => {
-      // If createdAt is available, use it; otherwise, fall back to sensible defaults
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA; // Sort in descending order (newest first)
-    })
-    .slice(0, 5); // Get only the first 5
+  // Filtered and sorted recent subscriptions
+  const recentSubscriptions = useMemo(() => {
+    return [...subscriptions]
+      .filter(sub => {
+        // Filter by type
+        if (recentTypeFilter !== "all" && sub.type !== recentTypeFilter) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        let comparison = 0;
+        switch (recentSortField) {
+          case 'name':
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case 'amount':
+            comparison = a.amount - b.amount;
+            break;
+          case 'type':
+            comparison = a.type.localeCompare(b.type);
+            break;
+          case 'createdAt':
+          default: {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            comparison = dateA - dateB;
+            break;
+          }
+        }
+        return recentSortDirection === 'asc' ? comparison : -comparison;
+      })
+      .slice(0, 5); // Get only the first 5
+  }, [subscriptions, recentTypeFilter, recentSortField, recentSortDirection]);
 
   // Handle QR scan data
   const handleQRScan = (data: QRCodeData) => {
@@ -299,21 +362,81 @@ export function Dashboard() {
       </div>
 
       {/* Expiring Subscriptions List */}
-      {expiringSubscriptions.length > 0 && (
+      {(expiringSubscriptions.length > 0 || expiringTypeFilter !== "all" || expiringDaysFilter !== 30) && (
         <div className="mt-8 mb-6">
           <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
-                {t("dashboard.aboutToExpire")}
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-                {t("dashboard.subscriptionsExpiringSoon")}
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+                    {t("dashboard.aboutToExpire")}
+                  </h3>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                    {t("dashboard.subscriptionsExpiringSoon")}
+                  </p>
+                </div>
+                
+                {/* Filters and Sort for Expiring Subscriptions */}
+                <div className="mt-4 sm:mt-0 flex flex-wrap gap-2">
+                  {/* Days filter */}
+                  <select
+                    className="rounded-md border-gray-300 dark:border-gray-600 py-1.5 pl-2 pr-8 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700"
+                    value={expiringDaysFilter}
+                    onChange={(e) => setExpiringDaysFilter(Number(e.target.value))}
+                  >
+                    <option value={7}>7 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
+                    <option value={14}>14 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
+                    <option value={30}>30 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
+                    <option value={60}>60 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
+                    <option value={90}>90 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
+                  </select>
+                  
+                  {/* Type filter */}
+                  <select
+                    className="rounded-md border-gray-300 dark:border-gray-600 py-1.5 pl-2 pr-8 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700"
+                    value={expiringTypeFilter}
+                    onChange={(e) => setExpiringTypeFilter(e.target.value as SubscriptionType | "all")}
+                  >
+                    <option value="all">{t("filters.allTypes")}</option>
+                    <option value="vehicle">{t("subscriptionTypes.vehicle")}</option>
+                    <option value="membership">{t("subscriptionTypes.membership")}</option>
+                    <option value="utility">{t("subscriptionTypes.utility")}</option>
+                    <option value="insurance">{t("subscriptionTypes.insurance")}</option>
+                    <option value="other">{t("subscriptionTypes.other")}</option>
+                  </select>
+                  
+                  {/* Sort dropdown */}
+                  <select
+                    className="rounded-md border-gray-300 dark:border-gray-600 py-1.5 pl-2 pr-8 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700"
+                    value={`${expiringSortField}-${expiringSortDirection}`}
+                    onChange={(e) => {
+                      const [field, dir] = e.target.value.split('-') as [ExpiringSortField, 'asc' | 'desc'];
+                      setExpiringSortField(field);
+                      setExpiringSortDirection(dir);
+                    }}
+                  >
+                    <option value="endDate-asc">{t("subscription.endDate")} ↑</option>
+                    <option value="endDate-desc">{t("subscription.endDate")} ↓</option>
+                    <option value="name-asc">{t("subscription.name")} A-Z</option>
+                    <option value="name-desc">{t("subscription.name")} Z-A</option>
+                    <option value="amount-asc">{t("subscription.amount")} ↑</option>
+                    <option value="amount-desc">{t("subscription.amount")} ↓</option>
+                    <option value="type-asc">{t("subscription.type")} A-Z</option>
+                    <option value="type-desc">{t("subscription.type")} Z-A</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-              {expiringSubscriptions
-                .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
-                .map((subscription) => {
+            
+            {expiringSubscriptions.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("No subscriptions found")}
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                {expiringSubscriptions.map((subscription) => {
                   const endDate = new Date(subscription.endDate);
                   const daysRemaining = Math.ceil(
                     (endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -327,9 +450,18 @@ export function Dashboard() {
                             {subscription.name}
                           </h4>
                           <div className="flex items-center mt-1">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {t(`subscriptionTypes.${subscription.type}`)} • {subscription.provider}
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 mr-2">
+                              {t(`subscriptionTypes.${subscription.type}`)}
                             </span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {subscription.provider}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {new Intl.NumberFormat('default', {
+                              style: 'currency',
+                              currency: subscription.currency || 'INR',
+                            }).format(subscription.amount)}
                           </div>
                         </div>
                         <div className="flex items-center">
@@ -357,23 +489,73 @@ export function Dashboard() {
                   );
                 })}
             </ul>
+            )}
           </div>
         </div>
       )}
 
       {/* Recently Added Subscriptions */}
-      {recentSubscriptions.length > 0 && (
+      {(recentSubscriptions.length > 0 || recentTypeFilter !== "all") && (
         <div className="mt-8 mb-6">
           <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
-                {t("dashboard.recentlyAdded")}
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-                {t("dashboard.recentlyAddedDescription")}
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+                    {t("dashboard.recentlyAdded")}
+                  </h3>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                    {t("dashboard.recentlyAddedDescription")}
+                  </p>
+                </div>
+                
+                {/* Filters and Sort for Recent Subscriptions */}
+                <div className="mt-4 sm:mt-0 flex flex-wrap gap-2">
+                  {/* Type filter */}
+                  <select
+                    className="rounded-md border-gray-300 dark:border-gray-600 py-1.5 pl-2 pr-8 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700"
+                    value={recentTypeFilter}
+                    onChange={(e) => setRecentTypeFilter(e.target.value as SubscriptionType | "all")}
+                  >
+                    <option value="all">{t("filters.allTypes")}</option>
+                    <option value="vehicle">{t("subscriptionTypes.vehicle")}</option>
+                    <option value="membership">{t("subscriptionTypes.membership")}</option>
+                    <option value="utility">{t("subscriptionTypes.utility")}</option>
+                    <option value="insurance">{t("subscriptionTypes.insurance")}</option>
+                    <option value="other">{t("subscriptionTypes.other")}</option>
+                  </select>
+                  
+                  {/* Sort dropdown */}
+                  <select
+                    className="rounded-md border-gray-300 dark:border-gray-600 py-1.5 pl-2 pr-8 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700"
+                    value={`${recentSortField}-${recentSortDirection}`}
+                    onChange={(e) => {
+                      const [field, dir] = e.target.value.split('-') as [RecentSortField, 'asc' | 'desc'];
+                      setRecentSortField(field);
+                      setRecentSortDirection(dir);
+                    }}
+                  >
+                    <option value="createdAt-desc">{t("filters.createdAt")} ↓</option>
+                    <option value="createdAt-asc">{t("filters.createdAt")} ↑</option>
+                    <option value="name-asc">{t("subscription.name")} A-Z</option>
+                    <option value="name-desc">{t("subscription.name")} Z-A</option>
+                    <option value="amount-asc">{t("subscription.amount")} ↑</option>
+                    <option value="amount-desc">{t("subscription.amount")} ↓</option>
+                    <option value="type-asc">{t("subscription.type")} A-Z</option>
+                    <option value="type-desc">{t("subscription.type")} Z-A</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            
+            {recentSubscriptions.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("No subscriptions found")}
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {recentSubscriptions.map((subscription) => {
                 const isExpired = new Date(subscription.endDate) < currentDate;
                 const createdDate = subscription.createdAt ? new Date(subscription.createdAt) : null;
@@ -386,8 +568,11 @@ export function Dashboard() {
                           {subscription.name}
                         </h4>
                         <div className="flex items-center mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 mr-2">
+                            {t(`subscriptionTypes.${subscription.type}`)}
+                          </span>
                           <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {t(`subscriptionTypes.${subscription.type}`)} • {subscription.provider}
+                            {subscription.provider}
                           </span>
                         </div>
                         {createdDate && (
@@ -419,7 +604,8 @@ export function Dashboard() {
                   </li>
                 );
               })}
-            </ul>
+              </ul>
+            )}
             <div className="px-4 py-3 sm:px-6 border-t border-gray-200 dark:border-gray-700 text-center">
               <Link
                 to="/subscriptions"
