@@ -52,7 +52,10 @@
     "ascending": "आरोही",
     "descending": "अवरोही",
     "expiringDays": "समाप्त होने वाले (दिनों में)",
-    "showExpiring": "केवल समाप्त होने वाले दिखाएं"
+    "showExpiring": "केवल समाप्त होने वाले दिखाएं",
+    "days": "दिन",
+    "noLimit": "कोई सीमा नहीं",
+    "removeFilter": "फ़िल्टर हटाएं"
   },
   "dashboard": {
     "totalSubscriptions": "कुल सब्सक्रिप्शन",

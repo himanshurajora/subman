@@ -52,7 +52,10 @@
     "ascending": "Ascending",
     "descending": "Descending",
     "expiringDays": "Expiring within (days)",
-    "showExpiring": "Show Expiring Only"
+    "showExpiring": "Show Expiring Only",
+    "days": "days",
+    "noLimit": "no limit",
+    "removeFilter": "Remove filter"
   },
   "dashboard": {
     "totalSubscriptions": "Total Subscriptions",

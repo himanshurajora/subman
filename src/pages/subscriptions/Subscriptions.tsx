@@ -601,43 +601,43 @@ export function Subscriptions() {
               {searchTerm && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
                   {t("filters.search")}: {searchTerm}
-                  <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-indigo-600">×</button>
+                  <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-indigo-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               {statusFilter !== "all" && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                   {t("filters.status")}: {t(`filters.${statusFilter}`)}
-                  <button onClick={() => setStatusFilter("all")} className="ml-1 hover:text-green-600">×</button>
+                  <button onClick={() => setStatusFilter("all")} className="ml-1 hover:text-green-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               {typeFilter !== "all" && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                   {t("filters.type")}: {t(`subscriptionTypes.${typeFilter}`)}
-                  <button onClick={() => setTypeFilter("all")} className="ml-1 hover:text-purple-600">×</button>
+                  <button onClick={() => setTypeFilter("all")} className="ml-1 hover:text-purple-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               {providerFilter !== "all" && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                   {t("filters.provider")}: {providerFilter}
-                  <button onClick={() => setProviderFilter("all")} className="ml-1 hover:text-yellow-600">×</button>
+                  <button onClick={() => setProviderFilter("all")} className="ml-1 hover:text-yellow-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               {currencyFilter !== "all" && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                   {t("filters.currency")}: {currencyFilter}
-                  <button onClick={() => setCurrencyFilter("all")} className="ml-1 hover:text-blue-600">×</button>
+                  <button onClick={() => setCurrencyFilter("all")} className="ml-1 hover:text-blue-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               {(amountRangeFilter.min || amountRangeFilter.max) && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
-                  {t("filters.amount")}: {amountRangeFilter.min || '0'} - {amountRangeFilter.max || '∞'}
-                  <button onClick={() => setAmountRangeFilter({ min: '', max: '' })} className="ml-1 hover:text-pink-600">×</button>
+                  {t("filters.amount")}: {amountRangeFilter.min || '0'} - {amountRangeFilter.max || t("filters.noLimit")}
+                  <button onClick={() => setAmountRangeFilter({ min: '', max: '' })} className="ml-1 hover:text-pink-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               {(dateRangeFilter.startDate || dateRangeFilter.endDate) && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                   {t("filters.dateRange")}: {dateRangeFilter.startDate || '...'} - {dateRangeFilter.endDate || '...'}
-                  <button onClick={() => setDateRangeFilter({ startDate: '', endDate: '' })} className="ml-1 hover:text-orange-600">×</button>
+                  <button onClick={() => setDateRangeFilter({ startDate: '', endDate: '' })} className="ml-1 hover:text-orange-600" aria-label={t("filters.removeFilter")}>×</button>
                 </span>
               )}
               <button

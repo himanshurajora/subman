@@ -384,11 +384,11 @@ export function Dashboard() {
                     value={expiringDaysFilter}
                     onChange={(e) => setExpiringDaysFilter(Number(e.target.value))}
                   >
-                    <option value={7}>7 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
-                    <option value={14}>14 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
-                    <option value={30}>30 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
-                    <option value={60}>60 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
-                    <option value={90}>90 {t("dashboard.daysRemaining", { days: "" }).replace("{{days}}", "").trim()}</option>
+                    <option value={7}>7 {t("filters.days")}</option>
+                    <option value={14}>14 {t("filters.days")}</option>
+                    <option value={30}>30 {t("filters.days")}</option>
+                    <option value={60}>60 {t("filters.days")}</option>
+                    <option value={90}>90 {t("filters.days")}</option>
                   </select>
                   
                   {/* Type filter */}
