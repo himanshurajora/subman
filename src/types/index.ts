@@ -22,6 +22,10 @@ export interface Subscription {
   fileUrl?: string;
   fileMetadata?: FileMetadata;
   
+  // Multiple file support (for image uploads)
+  fileUrls?: string[];
+  fileMetadataList?: FileMetadata[];
+  
   // Contact information fields
   ownerName?: string;
   address?: string;

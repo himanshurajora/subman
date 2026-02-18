@@ -57,7 +57,9 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState<boolean>(false);
   const [isPdfMode, setIsPdfMode] = useState<boolean>(false);
+  const [isImageMode, setIsImageMode] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
@@ -102,15 +104,16 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     onClose();
   };
 
-  // Toggle between QR scanner and PDF upload
-  const toggleMode = () => {
-    setIsPdfMode(!isPdfMode);
+  // Set input mode directly
+  const setMode = (mode: 'qr' | 'pdf' | 'image') => {
+    setIsPdfMode(mode === 'pdf');
+    setIsImageMode(mode === 'image');
     setError('');
     setInvalidQRError(null);
     setRawQRContent(null);
     
-    // Stop scanner if running
-    if (controlsRef.current && !isPdfMode) {
+    // Stop scanner if leaving QR mode
+    if (mode !== 'qr' && controlsRef.current) {
       controlsRef.current.stop();
     }
   };
@@ -119,6 +122,13 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const handleUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  // Trigger image input click
+  const handleImageUploadClick = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.click();
     }
   };
 
@@ -303,6 +313,228 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     }
   };
 
+  // Handle image selection (multiple images for passports, documents etc.)
+  const handleImageSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Validate all files are images
+    const imageFiles = Array.from(files);
+    for (const file of imageFiles) {
+      if (!file.type.startsWith('image/')) {
+        setError(`File "${file.name}" is not an image`);
+        return;
+      }
+    }
+    
+    try {
+      setIsProcessingAI(true);
+      setIsUploading(true);
+      setRawQRContent(`Uploading ${imageFiles.length} image(s)...`);
+      
+      const storage = getStorage();
+      const timestamp = Date.now();
+      const uploadedUrls: string[] = [];
+      const uploadedMetadataList: { uploadedBy: string; userEmail: string; userId: string; uploadedAt: string; originalName: string }[] = [];
+      
+      // Upload all images to Firebase Storage
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const storageRef = ref(storage, `subscriptions/${timestamp}_${i}_${file.name}`);
+        
+        const customMetadata = {
+          uploadedBy: currentUser?.displayName || 'Unknown User',
+          userEmail: currentUser?.email || 'No Email',
+          userId: currentUser?.uid || 'No ID',
+          uploadedAt: new Date().toISOString(),
+          originalName: file.name
+        };
+
+        const metadata = {
+          contentType: file.type,
+          customMetadata
+        };
+
+        const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+        // Wait for upload to complete
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const fileProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              const overallProgress = ((i * 100) + fileProgress) / imageFiles.length;
+              setUploadProgress(overallProgress);
+            },
+            (error) => {
+              console.error(`Upload error for ${file.name}:`, error);
+              reject(error);
+            },
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log(`File ${file.name} available at`, downloadURL);
+              uploadedUrls.push(downloadURL);
+              uploadedMetadataList.push({
+                uploadedBy: customMetadata.uploadedBy,
+                userEmail: customMetadata.userEmail,
+                userId: customMetadata.userId,
+                uploadedAt: customMetadata.uploadedAt,
+                originalName: customMetadata.originalName
+              });
+              resolve();
+            }
+          );
+        });
+      }
+      
+      setIsUploading(false);
+      setRawQRContent(`Processing ${imageFiles.length} image(s) with AI...`);
+      
+      // Convert images to base64 for Gemini vision model
+      const imageParts: { inlineData: { data: string; mimeType: string } }[] = [];
+      for (const file of imageFiles) {
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        imageParts.push({
+          inlineData: {
+            data: base64,
+            mimeType: file.type
+          }
+        });
+      }
+      
+      // Process images with Gemini vision model
+      const result = await processImagesWithAI(imageParts);
+      if (result) {
+        // Add all download URLs and metadata to the result
+        const enhancedResult = {
+          ...result,
+          data: {
+            ...result.data,
+            fileUrl: uploadedUrls[0],
+            fileMetadata: uploadedMetadataList[0],
+            fileUrls: uploadedUrls,
+            fileMetadataList: uploadedMetadataList
+          }
+        };
+        console.log('Successfully processed images with AI:', enhancedResult);
+        onScan(enhancedResult);
+      } else {
+        console.error('AI processing failed to extract information from images');
+        setInvalidQRError('Could not extract subscription information from the uploaded images.');
+      }
+    } catch (error) {
+      console.error('Image processing error:', error);
+      setInvalidQRError(`Failed to process images: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+      setIsUploading(false);
+    } finally {
+      setIsProcessingAI(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Process images with Firebase Vertex AI (Gemini vision model)
+  const processImagesWithAI = async (imageParts: { inlineData: { data: string; mimeType: string } }[]): Promise<QRCodeData | null> => {
+    try {
+      setIsProcessingAI(true);
+      console.log(`Processing ${imageParts.length} image(s) with AI vision model...`);
+      
+      const firebaseApp = getApp();
+      const vertexAI = getVertexAI(firebaseApp);
+      const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
+      
+      const prompt = `
+        You are a precise document information extractor. Your task is to analyze the following image(s) of documents (such as passports, IDs, certificates, insurance papers, vehicle registration, etc.) and extract all relevant information.
+
+        IMPORTANT GUIDELINES:
+        1. NEVER use generic field names like "additionalField1" or "additionalField2"
+        2. Always use descriptive, human-readable field names that accurately represent the data
+        3. Use camelCase for field names and ensure they are self-documenting
+        4. ALWAYS identify and extract a unique identifier for the document as "uniqId" - this could be a passport number, document ID, registration number, policy number, etc.
+        5. Generate a concise summary of the document in the "notes" field
+
+        Extract these common fields if present:
+        - Type of subscription/document (vehicle, membership, utility, insurance, or other)
+        - Name/title of the document or subscription
+        - Provider or issuing organization/authority
+        - Start date or issue date (in YYYY-MM-DD format)
+        - End date or expiry date (in YYYY-MM-DD format)
+        - Amount or cost (numeric value)
+        - Currency
+        - Any unique identifier (passport number, vehicle number, membership ID, account number, policy number) - MUST BE EXTRACTED as "uniqId"
+
+        Personal/contact details to extract if available:
+        - Owner name or holder name
+        - Address
+        - Contact number or phone
+        - Email ID
+        - Date of birth
+        - Nationality
+        - Gender
+
+        Document-specific fields:
+        - For passports: passportNumber, nationality, dateOfBirth, placeOfBirth, dateOfIssue, dateOfExpiry, issuingAuthority, gender, mrz (machine readable zone text)
+        - For vehicle documents: vehicleModel, manufacturingYear, fuelType, registrationAuthority, chassisNumber, engineNumber, registrationType
+        - For insurance: coverageType, sumInsured, policyTerms, claimLimit, insuredName, beneficiaryName, premiumAmount, coveragePeriod, policyType
+        - For IDs/certificates: documentNumber, issuingAuthority, category, class
+
+        Return the information in a structured JSON format with the following schema:
+        {
+          "type": "vehicle|membership|utility|insurance|other",
+          "data": {
+            "name": "The name or title of the document",
+            "provider": "Issuing authority or provider name",
+            "startDate": "YYYY-MM-DD",
+            "endDate": "YYYY-MM-DD",
+            "amount": number,
+            "currency": "Currency code like INR, USD",
+            "uniqId": "The unique identifier for this document",
+            "notes": "A concise summary describing the document and key details",
+            "ownerName": "Name of the holder/owner",
+            "address": "Address if available",
+            "contactNumber": "Phone number",
+            "email": "Email address"
+          }
+        }
+
+        If there's not enough information to determine this is a valid document, respond with: {"insufficient": true}
+        
+        If multiple images are provided, combine the information from all images into a single response.
+      `;
+      
+      // Use generateContent with image parts for vision processing
+      const result = await model.generateContent([prompt, ...imageParts]);
+      const response = result.response;
+      let text = response.text();
+      console.log('AI vision response:', text);
+
+      // Remove markdown code blocks if present
+      text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      
+      try {
+        const parsedData = JSON.parse(text);
+        
+        if (parsedData.insufficient) {
+          console.log('AI determined insufficient document data from images');
+          return null;
+        }
+        
+        return parsedData as QRCodeData;
+      } catch (parseError) {
+        console.error('Error parsing AI vision response as JSON:', parseError);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error processing images with AI:', error);
+      return null;
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
   // Process QR data with Firebase Vertex AI when standard parsing fails
   const processWithAI = async (rawData: string): Promise<QRCodeData | null> => {
     try {
@@ -466,7 +698,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         
         <h4 className="text-indigo-300 font-semibold text-xl mb-2">AI Processing</h4>
         <p className="text-white text-sm mb-4">
-          {isPdfMode ? t('Analyzing subscription details from your PDF...') : t('Extracting subscription information from QR code...')}
+          {isImageMode ? t('Analyzing document images with AI vision...') : isPdfMode ? t('Analyzing subscription details from your PDF...') : t('Extracting subscription information from QR code...')}
         </p>
         
         {/* Text animation (typing effect) */}
@@ -926,33 +1158,52 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       
       <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
         <div className="p-3 sm:p-5">
-          <div className="mb-4 flex justify-between items-center">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-              {t(isPdfMode ? 'Upload PDF' : 'Scan QR Code')}
-            </h3>
-            
-            {/* Mode toggle button */}
-            <button
-              type="button"
-              onClick={toggleMode}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {isPdfMode ? (
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                  </svg>
-                  {t('Switch to QR')}
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                  </svg>
-                  {t('Switch to PDF')}
-                </span>
-              )}
-            </button>
+          <div className="mb-4">
+            {/* Segmented control for mode switching */}
+            <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+              <button
+                type="button"
+                onClick={() => setMode('qr')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  !isPdfMode && !isImageMode
+                    ? 'bg-white dark:bg-gray-600 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                {t('QR')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('pdf')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isPdfMode
+                    ? 'bg-white dark:bg-gray-600 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {t('PDF')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('image')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isImageMode
+                    ? 'bg-white dark:bg-gray-600 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {t('Images')}
+              </button>
+            </div>
           </div>
           
           {/* Error message */}
@@ -979,7 +1230,43 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             </div>
           )}
           
-          {isPdfMode ? (
+          {isImageMode ? (
+            // Image Upload Mode
+            <div>
+              {isUploading ? (
+                <UploadProgress />
+              ) : (
+                <>
+                  <div className="mb-4 flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <button
+                      type="button"
+                      onClick={handleImageUploadClick}
+                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      {t('Select Images')}
+                    </button>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      ref={imageInputRef}
+                      onChange={handleImageSelection}
+                      accept="image/*"
+                      multiple
+                    />
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+                    {t('Upload images of documents like passports, IDs, certificates, or any subscription documents.')}
+                    <br className="hidden sm:block" />
+                    {t('You can select multiple images at once. AI will analyze them to extract information.')}
+                  </p>
+                </>
+              )}
+            </div>
+          ) : isPdfMode ? (
             // PDF Mode
             <div>
               {isUploading ? (
