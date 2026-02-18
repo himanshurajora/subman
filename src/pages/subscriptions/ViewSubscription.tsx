@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { db, doc, getDoc } from "../../firebase";
-import { Subscription } from "../../types";
+import { Subscription, FileMetadata } from "../../types";
 import { Button } from "../../components/UI/Button";
 
 export function ViewSubscription() {
@@ -438,7 +438,7 @@ export function ViewSubscription() {
           {/* Document Section - merges all files from fileUrl and fileUrls into one list */}
           {(() => {
             // Build a unified list of all files
-            const allFiles: { url: string; metadata?: import('../../types').FileMetadata }[] = [];
+            const allFiles: { url: string; metadata?: FileMetadata }[] = [];
             
             // Add files from fileUrls array
             if (subscription.fileUrls && subscription.fileUrls.length > 0) {
@@ -457,7 +457,7 @@ export function ViewSubscription() {
             return (
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
-                  {allFiles.length > 1 ? t("Documents") : t("Document")} ({allFiles.length})
+                  {allFiles.length > 1 ? `${t("Documents")} (${allFiles.length})` : t("Document")}
                 </h3>
                 
                 <div className="space-y-4">
