@@ -104,27 +104,16 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     onClose();
   };
 
-  // Toggle between QR scanner, PDF upload, and Image upload
-  const toggleMode = () => {
-    if (!isPdfMode && !isImageMode) {
-      // QR -> PDF
-      setIsPdfMode(true);
-      setIsImageMode(false);
-    } else if (isPdfMode) {
-      // PDF -> Image
-      setIsPdfMode(false);
-      setIsImageMode(true);
-    } else {
-      // Image -> QR
-      setIsImageMode(false);
-      setIsPdfMode(false);
-    }
+  // Set input mode directly
+  const setMode = (mode: 'qr' | 'pdf' | 'image') => {
+    setIsPdfMode(mode === 'pdf');
+    setIsImageMode(mode === 'image');
     setError('');
     setInvalidQRError(null);
     setRawQRContent(null);
     
-    // Stop scanner if running
-    if (controlsRef.current && !isPdfMode && !isImageMode) {
+    // Stop scanner if leaving QR mode
+    if (mode !== 'qr' && controlsRef.current) {
       controlsRef.current.stop();
     }
   };
@@ -1169,40 +1158,52 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       
       <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
         <div className="p-3 sm:p-5">
-          <div className="mb-4 flex justify-between items-center">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-              {t(isImageMode ? 'Upload Images' : isPdfMode ? 'Upload PDF' : 'Scan QR Code')}
-            </h3>
-            
-            {/* Mode toggle button */}
-            <button
-              type="button"
-              onClick={toggleMode}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {isPdfMode ? (
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                  </svg>
-                  {t('Switch to Images')}
-                </span>
-              ) : isImageMode ? (
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                  </svg>
-                  {t('Switch to QR')}
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                  </svg>
-                  {t('Switch to PDF')}
-                </span>
-              )}
-            </button>
+          <div className="mb-4">
+            {/* Segmented control for mode switching */}
+            <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+              <button
+                type="button"
+                onClick={() => setMode('qr')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  !isPdfMode && !isImageMode
+                    ? 'bg-white dark:bg-gray-600 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                {t('QR')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('pdf')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isPdfMode
+                    ? 'bg-white dark:bg-gray-600 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {t('PDF')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('image')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isImageMode
+                    ? 'bg-white dark:bg-gray-600 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {t('Images')}
+              </button>
+            </div>
           </div>
           
           {/* Error message */}

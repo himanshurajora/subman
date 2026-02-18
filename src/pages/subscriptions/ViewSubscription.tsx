@@ -435,39 +435,60 @@ export function ViewSubscription() {
             </div>
           )}
           
-          {/* Document Section */}
-          {(subscription.fileUrl || (subscription.fileUrls && subscription.fileUrls.length > 0)) && (
-            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
-                {subscription.fileUrls && subscription.fileUrls.length > 1 ? t("Documents") : t("Document")}
-              </h3>
-              
-              {/* Multiple files display */}
-              {subscription.fileUrls && subscription.fileUrls.length > 0 ? (
+          {/* Document Section - merges all files from fileUrl and fileUrls into one list */}
+          {(() => {
+            // Build a unified list of all files
+            const allFiles: { url: string; metadata?: import('../../types').FileMetadata }[] = [];
+            
+            // Add files from fileUrls array
+            if (subscription.fileUrls && subscription.fileUrls.length > 0) {
+              subscription.fileUrls.forEach((url, index) => {
+                allFiles.push({ url, metadata: subscription.fileMetadataList?.[index] });
+              });
+            }
+            
+            // Add the single fileUrl if it exists and isn't already in the list
+            if (subscription.fileUrl && !allFiles.some(f => f.url === subscription.fileUrl)) {
+              allFiles.push({ url: subscription.fileUrl, metadata: subscription.fileMetadata });
+            }
+            
+            if (allFiles.length === 0) return null;
+            
+            return (
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-medium text-gray-900 dark:text-white text-lg mb-4">
+                  {allFiles.length > 1 ? t("Documents") : t("Document")} ({allFiles.length})
+                </h3>
+                
                 <div className="space-y-4">
-                  {subscription.fileUrls.map((url, index) => {
-                    const metadata = subscription.fileMetadataList?.[index];
-                    const isImage = metadata?.originalName?.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i);
+                  {allFiles.map((file, index) => {
+                    const isImage = file.metadata?.originalName?.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i) 
+                      || file.url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)/i);
                     return (
-                      <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 flex flex-col gap-4">
+                      <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 flex flex-col gap-3">
                         {isImage && (
                           <div className="flex justify-center">
                             <img 
-                              src={url} 
-                              alt={metadata?.originalName || `Document ${index + 1}`}
+                              src={file.url} 
+                              alt={file.metadata?.originalName || `Document ${index + 1}`}
                               className="max-h-64 rounded-md object-contain border border-gray-200 dark:border-gray-700"
                             />
                           </div>
                         )}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                           <div className="flex-grow min-w-0">
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                              {metadata?.originalName || `${t("File")} ${index + 1}`}
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              {file.metadata?.originalName || `${t("File")} ${index + 1}`}
                             </p>
+                            {file.metadata && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {t("Uploaded By")} {file.metadata.uploadedBy} • {new Date(file.metadata.uploadedAt).toLocaleString()}
+                              </p>
+                            )}
                           </div>
                           
                           <a
-                            href={url}
+                            href={file.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap"
@@ -478,96 +499,13 @@ export function ViewSubscription() {
                             {t("View/Download")}
                           </a>
                         </div>
-                        
-                        {metadata && (
-                          <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                              <div>
-                                <dt className="text-gray-500 dark:text-gray-400">
-                                  {t("Uploaded By")}
-                                </dt>
-                                <dd className="font-medium text-gray-900 dark:text-white">
-                                  {metadata.uploadedBy}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt className="text-gray-500 dark:text-gray-400">
-                                  {t("Upload Date")}
-                                </dt>
-                                <dd className="font-medium text-gray-900 dark:text-white">
-                                  {new Date(metadata.uploadedAt).toLocaleString()}
-                                </dd>
-                              </div>
-                            </dl>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
                 </div>
-              ) : (
-                /* Single file display (backward compatible) */
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 flex flex-col gap-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex-grow">
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        {t("Attached File")}
-                      </p>
-                      <p className="text-sm text-gray-900 dark:text-white break-all font-mono">
-                        {subscription.fileUrl}
-                      </p>
-                    </div>
-                    
-                    <a
-                      href={subscription.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      {t("View/Download")}
-                    </a>
-                  </div>
-                  
-                  {subscription.fileMetadata && (
-                    <div className="mt-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                        {t("File Information")}
-                      </p>
-                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <dt className="text-gray-500 dark:text-gray-400">
-                            {t("Original Filename")}
-                          </dt>
-                          <dd className="font-medium text-gray-900 dark:text-white">
-                            {subscription.fileMetadata.originalName}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-500 dark:text-gray-400">
-                            {t("Uploaded By")}
-                          </dt>
-                          <dd className="font-medium text-gray-900 dark:text-white">
-                            {subscription.fileMetadata.uploadedBy}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-500 dark:text-gray-400">
-                            {t("Upload Date")}
-                          </dt>
-                          <dd className="font-medium text-gray-900 dark:text-white">
-                            {new Date(subscription.fileMetadata.uploadedAt).toLocaleString()}
-                          </dd>
-                        </div>
-                      </dl>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
           
           {/* Additional Details (Dynamic Fields) */}
           {(() => {
